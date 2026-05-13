@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CoinScope - Top 5 Potensi Naik</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">
+        <span class="coin-icon">🪙</span>
+        <h1>CoinScope</h1>
+      </div>
+      <p class="subtitle">Sistem Lacak Koin Berpotensi Naik</p>
+    </header>
+
+    <div class="stats-bar" id="stats">
+      <div class="stat">
+        <span class="stat-label">Timestamp</span>
+        <span class="stat-value" id="timestamp">-</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Universe</span>
+        <span class="stat-value" id="universe">-</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Lolos Filter</span>
+        <span class="stat-value" id="filtered">-</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Cache Age</span>
+        <span class="stat-value" id="cacheAge">-</span>
+      </div>
+    </div>
+
+    <div class="refresh-btn-container">
+      <button id="refreshBtn" onclick="refreshData()">
+        <span class="icon">🔄</span> Refresh Data
+      </button>
+    </div>
+
+    <div class="coins-container" id="coinsContainer">
+      <div class="loading">Loading...</div>
+    </div>
+
+    <footer>
+      <p>⚠️ Bukan rekomendasi investasi. Ini scoring berbasis momentum historis.</p>
+      <p class="disclaimer">Data dari CoinMarketCap API | Weighted Scoring: 40% 7d + 30% Volume + 20% MCap Tier + 10% 24h</p>
+    </footer>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="app.js"></script>
+</body>
+</html>
