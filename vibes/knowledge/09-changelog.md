@@ -1,5 +1,57 @@
 # CoinScope - Changelog & Implementation Notes
 
+## v1.0.1 - Tracking Mode Enhancement (13 Mei 2026)
+
+---
+
+### 1. Dual Tracking Mode
+
+Setelah checkbox di-centang, user sekarang memilih mode tracking via dialog:
+
+| Mode | Deskripsi | Display |
+|------|-----------|---------|
+| **📈 Entry Price** | Harga saat pertama kali track dicatat sebagai "harga beli" | Profit/Loss % dihitung dari entry price |
+| **🌐 CMC Live** | Gunakan data persentase 7d & 24h langsung dari CMC | Tampilkan 7d/24h change dari snapshot terbaru |
+
+**Data baru di `tracked.json`:**
+```json
+{
+  "id": 1,
+  "symbol": "BTC",
+  "name": "Bitcoin",
+  "added_at": 1778647630,
+  "tracking_mode": "entry",
+  "entry_price": 98234.50,
+  "entry_timestamp": 1778647630
+}
+```
+
+**File yang diubah:**
+- `src/tracking.js` — `addTrackedCoin(coin, mode, entryPrice)`, `getLatestSnapshots()` include `entry_performance`
+- `src/server.js` — `/api/track` pass mode + entry_price, `/api/history/:id` return entry info
+- `public/app.js` — Checkbox langsung trigger dialog mode, hapus batch "Track X Coins" button
+- `public/style.css` — Badge `.mode-entry` (hijau) & `.mode-cmc` (biru)
+
+---
+
+### 2. Snapshot untuk Semua Tracked Coins
+
+**Sebelumnya:** Snapshot hanya disimpan untuk tracked coins yang **lolos hard filter**.
+
+**Sekarang:** Semua tracked coins selalu tersimpan snapshot-nya saat Refresh, meskipun tidak lolos filter.
+
+**Logika baru di `/api/refresh`:**
+```
+tracked lolos filter  → snapshot dengan tier + weightedScore
+tracked tidak lolos   → snapshot dengan tier, weightedScore = null
+```
+
+**File yang diubah:**
+- `src/scorer.js` — Export `getMarketCapTierScore` (sebelumnya private)
+- `src/server.js` — Ambil tracked coins dari raw `coins` list jika tidak ada di `scoredCoins`
+
+---
+
 ## v1.0 - MVP + Web UI (Released)
 
 **Release Date:** 13 Mei 2026
