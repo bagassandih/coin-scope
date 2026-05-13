@@ -1,4 +1,23 @@
 let currentData = null;
+var refreshCooldown = 30; // seconds
+var refreshCountdownInterval = null;
+
+function startRefreshCooldown(btn) {
+  var remaining = refreshCooldown;
+  btn.disabled = true;
+  btn.dataset.originalHtml = btn.innerHTML;
+
+  refreshCountdownInterval = setInterval(function() {
+    remaining--;
+    btn.innerHTML = '<span class="icon">⏳</span> Tunggu ' + remaining + 's';
+    if (remaining <= 0) {
+      clearInterval(refreshCountdownInterval);
+      refreshCountdownInterval = null;
+      btn.disabled = false;
+      btn.innerHTML = btn.dataset.originalHtml;
+    }
+  }, 1000);
+}
 
 function formatCurrency(value) {
   if (value >= 1e12) return '$' + (value / 1e12).toFixed(2) + 'T';
@@ -199,6 +218,8 @@ async function fetchData() {
 
 async function refreshData() {
   var btn = document.getElementById('refreshBtn');
+  if (btn.disabled) return;
+
   btn.classList.add('loading');
   btn.disabled = true;
 
@@ -239,7 +260,7 @@ async function refreshData() {
     });
   } finally {
     btn.classList.remove('loading');
-    btn.disabled = false;
+    startRefreshCooldown(btn);
   }
 }
 
