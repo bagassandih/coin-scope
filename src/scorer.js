@@ -7,7 +7,7 @@ function normalize(value, min, max) {
 }
 
 // Get market cap tier score
-function getMarketCapTierScore(marketCap) {
+export function getMarketCapTierScore(marketCap) {
   if (marketCap >= marketCapTiers.large.min) {
     return { score: marketCapTiers.large.score, label: marketCapTiers.large.label, name: 'Large' };
   }

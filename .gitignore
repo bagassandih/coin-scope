@@ -1,5 +1,6 @@
 node_modules/
 .env
 src/cache/*.json
+src/data/*.json
 .DS_Store
 *.log

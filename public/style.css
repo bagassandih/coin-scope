@@ -95,9 +95,12 @@ h1 {
 .refresh-btn-container {
   text-align: center;
   margin-bottom: 2rem;
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
 }
 
-#refreshBtn {
+#refreshBtn, #trackedBtn {
   background: linear-gradient(135deg, var(--accent), #8b5cf6);
   color: white;
   border: none;
@@ -112,12 +115,16 @@ h1 {
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
-#refreshBtn:hover {
+#trackedBtn {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+}
+
+#refreshBtn:hover, #trackedBtn:hover {
   transform: translateY(-2px);
   box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
 }
 
-#refreshBtn:active {
+#refreshBtn:active, #trackedBtn:active {
   transform: translateY(0);
 }
 
@@ -321,4 +328,197 @@ footer {
   h1 {
     font-size: 2rem;
   }
+
+  .refresh-btn-container {
+    flex-direction: column;
+  }
+}
+
+/* Checkbox styling */
+.track-checkbox {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+
+.track-checkbox:checked {
+  accent-color: var(--accent);
+}
+
+/* Modal styles */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+.modal-content {
+  background-color: var(--bg-card);
+  margin: 5% auto;
+  padding: 0;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--bg-secondary);
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.close {
+  color: var(--text-secondary);
+  font-size: 2rem;
+  font-weight: bold;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.close:hover {
+  color: var(--text-primary);
+}
+
+.modal-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.history-table th,
+.history-table td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--bg-secondary);
+}
+
+.history-table th {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.history-table tr:hover {
+  background-color: var(--bg-secondary);
+}
+
+.positive {
+  color: var(--success);
+}
+
+.negative {
+  color: var(--danger);
+}
+
+.tracked-coins-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.tracked-coin-item {
+  background: var(--bg-secondary);
+  padding: 1rem;
+  border-radius: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.tracked-coin-item:hover {
+  background: #334155;
+}
+
+.tracked-coin-info h3 {
+  margin: 0 0 0.25rem 0;
+}
+
+.tracked-coin-info p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.tracked-coin-performance {
+  text-align: right;
+}
+
+.tracked-coin-performance .price {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.tracked-coin-performance .change {
+  font-size: 0.875rem;
+}
+
+.untrack-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  margin-left: 1rem;
+  transition: background 0.2s;
+}
+
+.untrack-btn:hover {
+  background: #dc2626;
+}
+
+/* Mode badges */
+.mode-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  margin-left: 0.4rem;
+  vertical-align: middle;
+}
+
+.mode-entry {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.mode-cmc {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.4);
+}
+
+.entry-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.entry-pct {
+  font-size: 0.95rem;
+  font-weight: 600;
 }

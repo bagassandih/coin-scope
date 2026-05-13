@@ -39,10 +39,26 @@
       <button id="refreshBtn" onclick="refreshData()">
         <span class="icon">🔄</span> Refresh Data
       </button>
+      <button id="trackedBtn" onclick="showTrackedCoins()">
+        <span class="icon">📊</span> Tracked Coins
+      </button>
     </div>
 
     <div class="coins-container" id="coinsContainer">
       <div class="loading">Loading...</div>
+    </div>
+
+    <!-- History Modal -->
+    <div id="historyModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="historyTitle">Coin History</h2>
+          <span class="close" onclick="closeHistoryModal()">&times;</span>
+        </div>
+        <div class="modal-body" id="historyBody">
+          <div class="loading">Loading...</div>
+        </div>
+      </div>
     </div>
 
     <footer>
