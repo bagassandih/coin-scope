@@ -32,12 +32,15 @@ export function calculateScores(coins) {
   // Find min/max for normalization
   const change7dValues = coins.map(c => c.percent_change_7d);
   const change24hValues = coins.map(c => c.percent_change_24h);
+  const change30dValues = coins.map(c => c.percent_change_30d);
   const volumeRatios = coins.map(c => getVolumeRatio(c));
 
   const min7d = Math.min(...change7dValues);
   const max7d = Math.max(...change7dValues);
   const min24h = Math.min(...change24hValues);
   const max24h = Math.max(...change24hValues);
+  const min30d = Math.min(...change30dValues);
+  const max30d = Math.max(...change30dValues);
   const minVol = Math.min(...volumeRatios);
   const maxVol = Math.max(...volumeRatios);
 
@@ -50,8 +53,17 @@ export function calculateScores(coins) {
     const sVol = normalize(volumeRatio, minVol, maxVol);
     const sMcap = tier.score;
 
+    // Hybrid 30d logic (v1.1)
+    let s30d;
+    if (coin.percent_change_30d <= 0) {
+      s30d = 20; // Penalty for dead cat bounce / flat trend
+    } else {
+      s30d = normalize(coin.percent_change_30d, min30d, max30d);
+    }
+
     const weightedScore =
       (s7d * weights.change7d) +
+      (s30d * weights.change30d) +
       (sVol * weights.volume) +
       (sMcap * weights.marketCapTier) +
       (s24h * weights.change24h);
@@ -63,6 +75,7 @@ export function calculateScores(coins) {
       volumeRatio,
       s7d,
       s24h,
+      s30d,
       sVol,
       sMcap,
       weightedScore: Math.round(weightedScore * 10) / 10,

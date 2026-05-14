@@ -64,12 +64,12 @@ Tampilkan ke terminal dengan format di [Spesifikasi Output](./06-output-spec.md)
 
 ---
 
-## Weighted Scoring — Formula Resmi
+## Weighted Scoring — Formula Resmi (v1.1)
 
 ### Formula
 
 ```
-Weighted Score = (S_7d × 40%) + (S_vol × 30%) + (S_mcap_tier × 20%) + (S_24h × 10%)
+Weighted Score = (S_7d × 30%) + (S_30d × 15%) + (S_vol × 30%) + (S_mcap_tier × 20%) + (S_24h × 5%)
 ```
 
 Dimana `S_*` = nilai metrik yang sudah dinormalisasi ke skala 0–100.
@@ -78,10 +78,26 @@ Dimana `S_*` = nilai metrik yang sudah dinormalisasi ke skala 0–100.
 
 | Metrik | Bobot | Cara Hitung | Alasan Bobot |
 |--------|-------|-------------|--------------|
-| **7d Price Change** (S_7d) | 40% | Min-max normalize `percent_change_7d` | Momentum mingguan = sinyal terkuat |
+| **7d Price Change** (S_7d) | 30% | Min-max normalize `percent_change_7d` | Momentum mingguan |
+| **30d Confirmation** (S_30d) | 15% | Hybrid: 30d ≤ 0 → 20, 30d > 0 → normalize | Konfirmasi tren sehat, cegah dead cat bounce |
 | **Volume Spike** (S_vol) | 30% | Normalize: `volume_24h / (market_cap × 0.01)` | Volume konfirmasi tren |
 | **Market Cap Tier** (S_mcap) | 20% | Large=25, Mid=50, Small=75, Micro=100 | Trade-off risiko-reward |
-| **24h Price Change** (S_24h) | 10% | Min-max normalize `percent_change_24h` | Konfirmasi jangka sangat pendek |
+| **24h Price Change** (S_24h) | 5% | Min-max normalize `percent_change_24h` | Konfirmasi jangka sangat pendek |
+
+### Hybrid 30d Logic
+
+```javascript
+if (coin.percent_change_30d <= 0) {
+  s30d = 20; // Penalty untuk dead cat bounce / flat trend
+} else {
+  s30d = normalize(coin.percent_change_30d, min30d, max30d);
+}
+```
+
+**Alasan Hybrid:**
+- Tidak sepenuhnya matikan koin dengan 30d negatif (mungkin reversal)
+- Tapi beri penalty signifikan dibanding koin dengan tren sehat
+- Koin dengan 7d & 30d searah dapat reward lebih tinggi
 
 ### Market Cap Tier Scoring
 
@@ -96,13 +112,19 @@ Dimana `S_*` = nilai metrik yang sudah dinormalisasi ke skala 0–100.
 
 ---
 
-## Pseudocode
+## Pseudocode (v1.1)
 
 ```python
 def calculate_weighted_score(coin):
     # Normalisasi min-max (perlu hitung min/max dari universe dulu)
     s_7d = normalize(coin.percent_change_7d, min_7d, max_7d)
     s_24h = normalize(coin.percent_change_24h, min_24h, max_24h)
+
+    # Hybrid 30d logic
+    if coin.percent_change_30d <= 0:
+        s_30d = 20  # Penalty untuk dead cat bounce
+    else:
+        s_30d = normalize(coin.percent_change_30d, min_30d, max_30d)
 
     # Volume ratio
     volume_ratio = coin.volume_24h / (coin.market_cap * 0.01)
@@ -111,8 +133,8 @@ def calculate_weighted_score(coin):
     # Market cap tier
     s_mcap = get_tier_score(coin.market_cap)
 
-    # Weighted score
-    score = (s_7d * 0.40) + (s_vol * 0.30) + (s_mcap * 0.20) + (s_24h * 0.10)
+    # Weighted score (v1.1)
+    score = (s_7d * 0.30) + (s_30d * 0.15) + (s_vol * 0.30) + (s_mcap * 0.20) + (s_24h * 0.05)
 
     return score
 ```

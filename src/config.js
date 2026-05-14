@@ -20,12 +20,13 @@ if (!config.cmcApiKey) {
   throw new Error('CMC_API_KEY is required. Set it in .env file');
 }
 
-// Scoring weights
+// Scoring weights (v1.1 - updated for 30d confirmation)
 export const weights = {
-  change7d: 0.40,
-  volume: 0.30,
-  marketCapTier: 0.20,
-  change24h: 0.10,
+  change7d: 0.30,      // Reduced from 40%
+  change30d: 0.15,     // NEW: 30d trend confirmation
+  volume: 0.30,        // Unchanged
+  marketCapTier: 0.20, // Unchanged
+  change24h: 0.05,     // Reduced from 10%
 };
 
 // Hard filter thresholds

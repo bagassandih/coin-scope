@@ -18,11 +18,15 @@
 
 ## 🎯 Quick Reference
 
-### Algoritma Scoring
+### Algoritma Scoring (v1.1)
 
 ```
-Weighted Score = (S_7d × 40%) + (S_vol × 30%) + (S_mcap × 20%) + (S_24h × 10%)
+Weighted Score = (S_7d × 30%) + (S_30d × 15%) + (S_vol × 30%) + (S_mcap × 20%) + (S_24h × 5%)
 ```
+
+**30d Hybrid Logic:**
+- `30d change ≤ 0` → Skor 20 (dead cat bounce / flat penalty)
+- `30d change > 0` → Normalized 0-100 (tren sehat)
 
 ### Hard Filter
 
@@ -46,7 +50,7 @@ Fetch Universe → Hard Filter → Normalisasi → Scoring → Ranking → Displ
 |-------|--------|--------|
 | v1.0 | ✅ **Released** | MVP + Web UI |
 | v1.0.1 | ✅ **Released** | Tracking Mode (Entry/CMC) + Snapshot Fix |
-| v1.1 | 🔮 Planned | Historical Tracking |
+| v1.1 | ✅ **Released** | 30d Confirmation Scoring + Historical Tracking |
 | v1.2 | 🔮 Planned | Otomasi |
 | v2.0 | 🔮 Planned | Scale Up |
 

@@ -50,23 +50,35 @@ coin-scope/
 
 ---
 
-## v1.1 - Evaluasi
+## v1.1 - Evaluasi (Released)
 
 **Target:** Tracking & improvement berdasarkan data historis
 
 | Scope | Detail |
 |-------|--------|
-| **Goal** | Simpan history, evaluasi akurasi, adjust bobot |
-| **User** | Single user dengan data tracking |
+| **Goal** | Improve scoring accuracy dengan 30d confirmation |
+| **User** | Single user dengan better scoring |
 | **Timeline** | Sprint 3-4 |
 
-### Fitur Baru
+### Fitur Baru ✅
 
+- [x] **30d Confirmation Scoring** — Hybrid logic untuk deteksi tren sehat vs dead cat bounce
+- [x] **Rebalance Weights** — Kurangi ketergantungan pada 7d momentum (40% → 30%)
 - [x] Historical tracking (SQLite)
 - [x] Simpan snapshot tiap run
 - [x] Evaluasi akurasi setelah 30 hari
 - [x] Compare predicted vs actual
 - [x] Adjust bobot berdasarkan hasil evaluasi
+
+### Scoring Update
+
+| Metrik | v1.0 | v1.1 |
+|--------|------|------|
+| 7d Change | 40% | 30% |
+| **30d Confirmation** | - | **15%** |
+| Volume Spike | 30% | 30% |
+| Market Cap Tier | 20% | 20% |
+| 24h Change | 10% | 5% |
 
 ### Database Schema
 

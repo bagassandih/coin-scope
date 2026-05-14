@@ -1,5 +1,54 @@
 # CoinScope - Changelog & Implementation Notes
 
+## v1.1 - 30d Confirmation Scoring (14 Mei 2026)
+
+---
+
+### 1. Hybrid 30d Logic
+
+**Masalah:** Scoring v1.0 hanya bergantung pada momentum 7d (40%) dan 24h (10%), menyebabkan "buy at the top" trap — koin yang sudah naik tinggi terus dapat skor tinggi.
+
+**Solusi:** Tambah konfirmasi tren 30 hari dengan hybrid logic.
+
+| Metrik | v1.0 | v1.1 |
+|--------|------|------|
+| 7d Change | 40% | **30%** ↓ |
+| 30d Confirmation | - | **15%** ↑ (NEW) |
+| Volume Spike | 30% | 30% |
+| Market Cap Tier | 20% | 20% |
+| 24h Change | 10% | **5%** ↓ |
+
+**Hybrid Logic:**
+```javascript
+// Jika 30d negatif → penalty (dead cat bounce)
+if (coin.percent_change_30d <= 0) {
+  s30d = 20; // Skor rendah, bukan 0
+} else {
+  s30d = normalize(coin.percent_change_30d, min30d, max30d);
+}
+```
+
+**Alasan:**
+- Tidak sepenuhnya matikan koin dengan 30d negatif (mungkin reversal)
+- Tapi beri penalty signifikan dibanding koin dengan tren sehat
+- Koin dengan 7d & 30d searah (tren sehat) dapat reward
+
+**File yang diubah:**
+- `src/config.js` — Update `weights` dengan `change30d: 0.15`
+- `src/scorer.js` — Tambah hybrid 30d logic di `calculateScores()`
+
+---
+
+### 2. Impact ke Scoring
+
+| Scenario | v1.0 | v1.1 |
+|----------|------|------|
+| Koin pump 7d +50%, 30d +5% | High score | Lower score (30d hanya +5%) |
+| Koin naik stabil 7d +15%, 30d +25% | Medium score | **Higher score** (tren sehat) |
+| Dead cat bounce 7d +20%, 30d -30% | Medium-high score | **Low score** (30d penalty) |
+
+---
+
 ## v1.0.1 - Tracking Mode Enhancement (13 Mei 2026)
 
 ---
