@@ -144,6 +144,7 @@ export function getLatestSnapshots() {
 
     return {
       ...coin,
+      logo: `https://s2.coinmarketcap.com/static/img/coins/64x64/${coin.id}.png`,
       latest_snapshot: latest || null,
       snapshot_count: coinSnapshots.length,
       entry_performance,

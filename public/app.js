@@ -71,7 +71,44 @@ function renderCoins(data) {
   }
 
   container.innerHTML = data.top5.map(function(coin) {
-    return '<div class="coin-card"><div class="rank">#' + coin.rank + '</div><div class="coin-info"><div class="coin-header"><input type="checkbox" class="track-checkbox" data-id="' + coin.id + '" data-name="' + coin.name + '" data-symbol="' + coin.symbol + '"' + (coin.tracked ? ' checked' : '') + '><img src="' + coin.logo + '" alt="' + coin.name + '" class="coin-logo" onerror="this.src=\'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E🪙%3C/text%3E%3C/svg%3E\'"><div><div class="coin-name">' + coin.name + '<span class="tier-badge tier-' + coin.tierLabel + '">' + coin.tierLabel + '</span>' + (coin.platform ? '<span class="network-badge">' + coin.platform + '</span>' : '<span class="network-badge native">Native</span>') + '</div><div class="coin-symbol">' + coin.symbol + '</div></div></div><div class="coin-price">' + formatPrice(coin.price) + '</div><div class="coin-metrics"><span class="metric ' + (coin.percent_change_7d >= 0 ? 'positive' : 'negative') + '">7d: ' + formatPercent(coin.percent_change_7d) + '</span><span class="metric ' + (coin.percent_change_24h >= 0 ? 'positive' : 'negative') + '">24h: ' + formatPercent(coin.percent_change_24h) + '</span><span class="metric">Vol: ' + formatCurrency(coin.volume_24h) + '</span><span class="metric">MCap: ' + formatCurrency(coin.market_cap) + '</span></div></div><div class="coin-score"><div class="score-value">' + coin.score.toFixed(1) + '</div><div class="score-label">Score</div></div></div>';
+    var tierClass = 'tier-' + coin.tierLabel;
+    var platformBadge = coin.platform
+      ? '<span class="network-badge">' + coin.platform + '</span>'
+      : '<span class="network-badge native">Native</span>';
+
+    return '<div class="coin-card">' +
+      '<label class="track-checkbox-wrapper">' +
+        '<input type="checkbox" class="track-checkbox" data-id="' + coin.id + '" data-name="' + coin.name + '" data-symbol="' + coin.symbol + '"' + (coin.tracked ? ' checked' : '') + '>' +
+        '<span class="custom-checkbox"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>' +
+      '</label>' +
+      '<div class="coin-card-inner">' +
+        '<div class="coin-card-header">' +
+          '<div class="coin-card-rank">#' + coin.rank + '</div>' +
+          '<img src="' + coin.logo + '" alt="' + coin.name + '" class="coin-logo" onerror="this.src=\'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E🪙%3C/text%3E%3C/svg%3E\'">' +
+          '<div class="coin-header-info">' +
+            '<div class="coin-name-row">' +
+              '<span class="coin-name">' + coin.name + '</span>' +
+              '<span class="tier-badge ' + tierClass + '">' + coin.tierLabel + '</span>' +
+              platformBadge +
+            '</div>' +
+            '<span class="coin-symbol">' + coin.symbol + '</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="coin-card-price">' +
+          '<span class="coin-price">' + formatPrice(coin.price) + '</span>' +
+          '<div class="coin-card-score">' +
+            '<div class="score-value">' + coin.score.toFixed(1) + '</div>' +
+            '<div class="score-label">Score</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="coin-card-metrics">' +
+          '<div class="metric-item"><span class="metric-label">7d Change</span><span class="metric-value ' + (coin.percent_change_7d >= 0 ? 'positive' : 'negative') + '">' + formatPercent(coin.percent_change_7d) + '</span></div>' +
+          '<div class="metric-item"><span class="metric-label">24h Change</span><span class="metric-value ' + (coin.percent_change_24h >= 0 ? 'positive' : 'negative') + '">' + formatPercent(coin.percent_change_24h) + '</span></div>' +
+          '<div class="metric-item"><span class="metric-label">Volume</span><span class="metric-value">' + formatCurrency(coin.volume_24h) + '</span></div>' +
+          '<div class="metric-item"><span class="metric-label">Market Cap</span><span class="metric-value">' + formatCurrency(coin.market_cap) + '</span></div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
   }).join('');
 
   document.querySelectorAll('.track-checkbox').forEach(function(checkbox) {
@@ -319,14 +356,15 @@ async function showTrackedCoins() {
         }
 
         return '<div class="tracked-coin-item">' +
-          '<div onclick="showCoinHistory(' + item.id + ', \'' + item.symbol + '\')" style="flex:1;cursor:pointer;display:flex;justify-content:space-between;align-items:center">' +
+          '<div onclick="showCoinHistory(' + item.id + ', \'' + item.symbol + '\')" style="flex:1;cursor:pointer;display:flex;align-items:center;gap:0.75rem">' +
+          '<img src="' + item.logo + '" alt="' + item.symbol + '" class="tracked-coin-logo" onerror="this.src=\'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E🪙%3C/text%3E%3C/svg%3E\'">' +
           '<div class="tracked-coin-info">' +
           '<h3>' + item.name + ' (' + item.symbol + ') ' + modeBadge + '</h3>' +
           '<p>Added: ' + formatTimestamp(item.added_at) + '</p>' +
           '<p>Snapshots: ' + (item.snapshot_count || 0) + '</p>' +
           '</div>' +
-          performanceHtml +
           '</div>' +
+          performanceHtml +
           '<button class="untrack-btn" onclick="untrackCoin(' + item.id + ', \'' + item.symbol + '\', event)">Untrack</button>' +
           '</div>';
       }).join('') + '</div>';
