@@ -16,6 +16,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@supabase/supabase-js": "^2.106.0",
     "axios": "^1.7.9",
     "chalk": "^5.4.1",
     "cli-table3": "^0.6.5",

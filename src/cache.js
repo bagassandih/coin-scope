@@ -1,7 +1,17 @@
+// Cache module - Hybrid approach
+// CMC API data: File-based (large JSON)
+// Small cache items: Supabase
+
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { config } from './config.js';
+import * as db from './db.js';
 
 const CACHE_FILE = `${config.cacheDir}/cmc-data.json`;
+
+// ============================================
+// CMC API Cache (File-based)
+// Reason: Large JSON response, better stored in file
+// ============================================
 
 export function getCachedData() {
   if (!existsSync(CACHE_FILE)) {
@@ -55,4 +65,20 @@ export function getCacheAge() {
   } catch {
     return null;
   }
+}
+
+// ============================================
+// Supabase Cache (for small items)
+// ============================================
+
+export async function getDbCachedData(key) {
+  return db.getCachedData(key);
+}
+
+export async function setDbCachedData(key, data, ttlSeconds = 3600) {
+  return db.setCachedData(key, data, ttlSeconds);
+}
+
+export async function getDbCacheAge(key) {
+  return db.getCacheAge(key);
 }

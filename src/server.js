@@ -54,7 +54,8 @@ app.get('/api/top5', async (req, res) => {
 
     const scoredCoins = calculateScores(filterResult.passed);
     const top5 = rankTop5(scoredCoins);
-    const tracked = getTrackedCoins().map(t => t.id);
+    const tracked = await getTrackedCoins();
+    const trackedIds = tracked.map(t => t.id);
 
     res.json({
       success: true,
@@ -78,7 +79,7 @@ app.get('/api/top5', async (req, res) => {
         tier: coin.tier,
         tierLabel: coin.tierLabel,
         score: coin.weightedScore,
-        tracked: tracked.includes(coin.id),
+        tracked: trackedIds.includes(coin.id),
       })),
     });
   } catch (err) {
@@ -116,20 +117,20 @@ app.post('/api/refresh', async (req, res) => {
     const top5 = rankTop5(scoredCoins);
 
     // Get tracked coins for UI
-    const tracked = getTrackedCoins().map(t => t.id);
+    const tracked = await getTrackedCoins();
+    const trackedIds = tracked.map(t => t.id);
 
     // Save snapshots for ALL tracked coins (including those that didn't pass filter)
-    const trackedList = getTrackedCoins();
-    if (trackedList.length > 0) {
-      const trackedIds = new Set(trackedList.map(t => t.id));
+    if (tracked.length > 0) {
+      const trackedIdsSet = new Set(trackedIds);
 
       // Coins that passed filter already have tier + weightedScore from scorer
-      const trackedInScored = scoredCoins.filter(c => trackedIds.has(c.id));
+      const trackedInScored = scoredCoins.filter(c => trackedIdsSet.has(c.id));
       const scoredIds = new Set(trackedInScored.map(c => c.id));
 
       // Tracked coins that didn't pass filter — enrich with tier from raw data
       const trackedNotScored = coins
-        .filter(c => trackedIds.has(c.id) && !scoredIds.has(c.id))
+        .filter(c => trackedIdsSet.has(c.id) && !scoredIds.has(c.id))
         .map(c => {
           const tier = getMarketCapTierScore(c.market_cap);
           return { ...c, tier: tier.name, tierLabel: tier.label, weightedScore: null };
@@ -137,7 +138,7 @@ app.post('/api/refresh', async (req, res) => {
 
       const allTracked = [...trackedInScored, ...trackedNotScored];
       if (allTracked.length > 0) {
-        saveSnapshot(allTracked);
+        await saveSnapshot(allTracked);
         console.log(`  Saved snapshot for ${allTracked.length} tracked coin(s) (${trackedInScored.length} scored, ${trackedNotScored.length} unfiltered)`);
       }
     }
@@ -164,7 +165,7 @@ app.post('/api/refresh', async (req, res) => {
         tier: coin.tier,
         tierLabel: coin.tierLabel,
         score: coin.weightedScore,
-        tracked: tracked.includes(coin.id),
+        tracked: trackedIds.includes(coin.id),
       })),
     });
   } catch (err) {
@@ -178,9 +179,9 @@ app.post('/api/refresh', async (req, res) => {
 });
 
 // Get tracked coins list
-app.get('/api/tracked', (req, res) => {
+app.get('/api/tracked', async (req, res) => {
   try {
-    const tracked = getLatestSnapshots();
+    const tracked = await getLatestSnapshots();
     res.json({
       success: true,
       tracked,
@@ -195,7 +196,7 @@ app.get('/api/tracked', (req, res) => {
 });
 
 // Add/remove coins from tracking
-app.post('/api/track', (req, res) => {
+app.post('/api/track', async (req, res) => {
   try {
     const { coinId, action } = req.body;
 
@@ -209,9 +210,10 @@ app.post('/api/track', (req, res) => {
     let tracked;
     if (action === 'add') {
       const { mode, entry_price } = req.body;
-      tracked = addTrackedCoin(req.body.coin, mode || 'cmc', entry_price || null);
+      tracked = await addTrackedCoin(req.body.coin, mode || 'cmc', entry_price || null);
     } else if (action === 'remove') {
-      tracked = removeTrackedCoin(coinId);
+      await removeTrackedCoin(coinId);
+      tracked = await getTrackedCoins();
     } else {
       return res.status(400).json({
         success: false,
@@ -233,15 +235,15 @@ app.post('/api/track', (req, res) => {
 });
 
 // Get coin history
-app.get('/api/history/:coinId', (req, res) => {
+app.get('/api/history/:coinId', async (req, res) => {
   try {
     const { coinId } = req.params;
     const id = parseInt(coinId);
-    const snapshots = getCoinSnapshots(id);
-    const performance = getCoinPerformance(id);
+    const snapshots = await getCoinSnapshots(id);
+    const performance = await getCoinPerformance(id);
 
     // Include tracking mode + entry info
-    const tracked = getTrackedCoins();
+    const tracked = await getTrackedCoins();
     const coinTracking = tracked.find(c => c.id === id);
     const tracking_mode = coinTracking ? (coinTracking.tracking_mode || 'cmc') : 'cmc';
     const entry_price = coinTracking ? coinTracking.entry_price : null;
@@ -264,7 +266,7 @@ app.get('/api/history/:coinId', (req, res) => {
 
     res.json({
       success: true,
-      coinId,
+      coinId: id,
       snapshots,
       performance,
       tracking_mode,
