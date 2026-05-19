@@ -39,7 +39,13 @@ function formatPercent(value) {
 }
 
 function formatTimestamp(ts) {
-  var date = new Date(ts * 1000);
+  // Handle both Unix timestamp (number) and ISO string (from Supabase)
+  var date;
+  if (typeof ts === 'number') {
+    date = new Date(ts * 1000);
+  } else {
+    date = new Date(ts);
+  }
   var wibTime = new Date(date.getTime() + (7 * 60 * 60 * 1000));
   return wibTime.toISOString().replace('T', ' ').slice(0, 19) + ' WIB';
 }
