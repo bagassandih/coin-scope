@@ -1,5 +1,101 @@
 # CoinScope - Changelog & Implementation Notes
 
+## v1.1.1 - Supabase Integration (19 Mei 2026)
+
+---
+
+### 1. Database Migration
+
+**Sebelumnya:** Tracked coins & snapshots disimpan di local JSON files (`src/data/`)
+
+**Sekarang:** Menggunakan Supabase PostgreSQL untuk persistent storage
+
+| Data | Sebelum | Sesudah |
+|------|---------|---------|
+| Tracked Coins | `src/data/tracked.json` | `tracked_coins` table |
+| Snapshots | `src/data/snapshots.json` | `snapshots` table |
+| CMC Cache | `src/cache/cmc-data.json` | Tetap sama (local file) |
+
+**Alasan:**
+- Persistent storage di cloud
+- Lebih scalable untuk historical data
+- Backup otomatis dari Supabase
+- Query lebih powerful (SQL)
+
+---
+
+### 2. Database Schema
+
+**Tabel yang dibuat:**
+
+```sql
+-- tracked_coins
+CREATE TABLE tracked_coins (
+    id INTEGER PRIMARY KEY,
+    symbol VARCHAR(20) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    tracking_mode VARCHAR(10) CHECK (tracking_mode IN ('cmc', 'entry')),
+    entry_price DECIMAL(20, 8),
+    entry_timestamp TIMESTAMP WITH TIME ZONE,
+    added_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- snapshots
+CREATE TABLE snapshots (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    coin_id INTEGER NOT NULL,
+    price DECIMAL(20, 8) NOT NULL,
+    percent_change_7d DECIMAL(10, 2),
+    percent_change_24h DECIMAL(10, 2),
+    volume_24h DECIMAL(30, 2),
+    market_cap DECIMAL(30, 2),
+    tier VARCHAR(20),
+    score DECIMAL(10, 2),
+    timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- View untuk join
+CREATE VIEW tracked_with_latest_snapshot AS ...
+```
+
+---
+
+### 3. Code Changes
+
+**File baru:**
+- `src/db.js` — Supabase client & database operations
+
+**File diubah:**
+- `src/tracking.js` — Delegate ke db.js (backward compatible)
+- `src/cache.js` — Hybrid approach (CMC cache tetap local)
+- `src/server.js` — Async/await untuk database operations
+
+**File dihapus:**
+- `src/data/` — Folder deprecated
+
+---
+
+### 4. Environment Variables
+
+```env
+# Supabase Configuration (NEW)
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_DB_URL=postgresql://...
+```
+
+---
+
+### 5. Setup Instructions
+
+Lihat `supabase/SETUP.md` untuk guide lengkap:
+1. Create project di Supabase
+2. Jalankan SQL schema
+3. Update `.env` dengan kredensial
+4. Disable RLS (untuk development)
+
+---
+
 ## v1.1 - 30d Confirmation Scoring (14 Mei 2026)
 
 ---

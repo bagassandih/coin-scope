@@ -51,6 +51,7 @@ Fetch Universe → Hard Filter → Normalisasi → Scoring → Ranking → Displ
 | v1.0 | ✅ **Released** | MVP + Web UI |
 | v1.0.1 | ✅ **Released** | Tracking Mode (Entry/CMC) + Snapshot Fix |
 | v1.1 | ✅ **Released** | 30d Confirmation Scoring + Historical Tracking |
+| v1.1.1 | ✅ **Released** | **Supabase Integration** |
 | v1.2 | 🔮 Planned | Otomasi |
 | v2.0 | 🔮 Planned | Scale Up |
 

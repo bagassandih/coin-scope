@@ -1,6 +1,6 @@
 node_modules/
 .env
+# CMC cache (large JSON file, stored locally)
 src/cache/*.json
-src/data/*.json
 .DS_Store
 *.log
