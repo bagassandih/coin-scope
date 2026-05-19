@@ -1,6 +1,180 @@
 let currentData = null;
+let trackedData = null;
 var refreshCooldown = 30; // seconds
 var refreshCountdownInterval = null;
+var currentTab = 'top5';
+
+// Tab Navigation
+function switchTab(tabName) {
+  currentTab = tabName;
+
+  // Update tab buttons
+  document.querySelectorAll('.tab-btn').forEach(function(btn) {
+    btn.classList.remove('active');
+    if (btn.dataset.tab === tabName) {
+      btn.classList.add('active');
+    }
+  });
+
+  // Update tab content
+  document.querySelectorAll('.tab-content').forEach(function(content) {
+    content.classList.remove('active');
+  });
+  document.getElementById('tab-' + tabName).classList.add('active');
+
+  // Load data for the tab
+  if (tabName === 'tracked') {
+    loadTrackedCoins();
+  }
+}
+
+// Load tracked coins for tab
+async function loadTrackedCoins() {
+  var container = document.getElementById('trackedContainer');
+  container.innerHTML = '<div class="loading">Loading...</div>';
+
+  try {
+    var response = await fetch('/api/tracked');
+    var data = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.error);
+    }
+
+    trackedData = data;
+
+    // Update stats
+    var trackedCount = data.tracked.length;
+    var snapshotsTotal = data.tracked.reduce(function(sum, item) {
+      return sum + (item.snapshot_count || 0);
+    }, 0);
+
+    document.getElementById('trackedCount').textContent = trackedCount;
+    document.getElementById('trackedTotal').textContent = trackedCount;
+    document.getElementById('snapshotsTotal').textContent = snapshotsTotal;
+
+    if (data.tracked.length === 0) {
+      container.innerHTML =
+        '<div class="empty-state">' +
+          '<div class="icon">📊</div>' +
+          '<h3>Belum ada koin di-track</h3>' +
+          '<p>Centang koin di tab Top 5 lalu pilih mode tracking</p>' +
+        '</div>';
+      return;
+    }
+
+    container.innerHTML = '<div class="tracked-coins-list">' +
+      data.tracked.map(function(item) {
+        var isEntry = item.tracking_mode === 'entry';
+        var modeBadge = isEntry
+          ? '<span class="mode-badge mode-entry">📈 Entry</span>'
+          : '<span class="mode-badge mode-cmc">🌐 CMC</span>';
+
+        var performanceHtml = '';
+        if (isEntry) {
+          if (item.entry_performance) {
+            var pct = item.entry_performance.price_change_percent;
+            var pctClass = pct >= 0 ? 'positive' : 'negative';
+            performanceHtml =
+              '<div class="tracked-coin-performance">' +
+                '<div class="price">' + formatPrice(item.entry_performance.latest_price) + '</div>' +
+                '<div class="entry-label">Entry: ' + formatPrice(item.entry_performance.entry_price) + '</div>' +
+                '<div class="' + pctClass + ' entry-pct">' + formatPercent(pct) + '</div>' +
+              '</div>';
+          } else {
+            performanceHtml =
+              '<div class="tracked-coin-performance">' +
+                '<div class="entry-label">Entry: ' + (item.entry_price ? formatPrice(item.entry_price) : '-') + '</div>' +
+                '<div style="color:#94a3b8;font-size:0.8rem">Belum ada snapshot</div>' +
+              '</div>';
+          }
+        } else {
+          if (item.latest_snapshot) {
+            var c7d = item.percent_change_7d;
+            var c24h = item.percent_change_24h;
+            performanceHtml =
+              '<div class="tracked-coin-performance">' +
+                '<div class="price">' + formatPrice(item.latest_price) + '</div>' +
+                '<div class="' + (c7d >= 0 ? 'positive' : 'negative') + '">7d: ' + (c7d !== null ? formatPercent(c7d) : '-') + '</div>' +
+                '<div class="' + (c24h >= 0 ? 'positive' : 'negative') + '">24h: ' + (c24h !== null ? formatPercent(c24h) : '-') + '</div>' +
+              '</div>';
+          } else {
+            performanceHtml = '<div class="tracked-coin-performance"><p>Belum ada snapshot</p></div>';
+          }
+        }
+
+        return '<div class="tracked-coin-item" onclick="showCoinHistory(' + item.id + ', \'' + item.symbol + '\')">' +
+          '<img src="' + item.logo + '" alt="' + item.symbol + '" class="tracked-coin-logo" onerror="this.src=\'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E🪙%3C/text%3E%3C/svg%3E\'">' +
+          '<div class="tracked-coin-info">' +
+            '<h3>' + item.name + ' (' + item.symbol + ') ' + modeBadge + '</h3>' +
+            '<p>Added: ' + formatTimestamp(item.added_at) + ' • Snapshots: ' + (item.snapshot_count || 0) + '</p>' +
+          '</div>' +
+          performanceHtml +
+          '<button class="untrack-btn" onclick="untrackCoin(' + item.id + ', \'' + item.symbol + '\', event)">Untrack</button>' +
+        '</div>';
+      }).join('') +
+    '</div>';
+
+  } catch (err) {
+    container.innerHTML =
+      '<div class="empty-state">' +
+        '<div class="icon">❌</div>' +
+        '<h3>Gagal memuat data</h3>' +
+        '<p>' + err.message + '</p>' +
+      '</div>';
+  }
+}
+
+// Refresh tracked coins (refresh data + reload)
+async function refreshTrackedCoins() {
+  var btn = document.getElementById('refreshTrackedBtn');
+  if (btn.disabled) return;
+
+  btn.classList.add('loading');
+  btn.disabled = true;
+
+  try {
+    // First refresh the data from CMC
+    var response = await fetch('/api/refresh', { method: 'POST' });
+    var data = await response.json();
+
+    if (data.success) {
+      currentData = data;
+
+      // Then reload tracked coins
+      await loadTrackedCoins();
+
+      // Update top5 tab stats if needed
+      if (data.top5) {
+        renderCoins(data);
+        updateStats(data);
+      }
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Data Refreshed!',
+        text: 'Snapshot tersimpan untuk semua tracked coins',
+        timer: 2000,
+        showConfirmButton: false,
+        background: '#1e293b',
+        color: '#f8fafc'
+      });
+    } else {
+      throw new Error(data.error);
+    }
+  } catch (err) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Refresh Failed',
+      text: err.message,
+      background: '#1e293b',
+      color: '#f8fafc'
+    });
+  } finally {
+    btn.classList.remove('loading');
+    btn.disabled = false;
+  }
+}
 
 function startRefreshCooldown(btn) {
   var remaining = refreshCooldown;
@@ -239,6 +413,9 @@ async function fetchData() {
       currentData = data;
       renderCoins(data);
       updateStats(data);
+
+      // Update tracked count
+      updateTrackedCount();
     } else {
       Swal.fire({
         icon: 'error',
@@ -256,6 +433,19 @@ async function fetchData() {
       background: '#1e293b',
       color: '#f8fafc'
     });
+  }
+}
+
+// Update tracked count badge
+async function updateTrackedCount() {
+  try {
+    var response = await fetch('/api/tracked');
+    var data = await response.json();
+    if (data.success) {
+      document.getElementById('trackedCount').textContent = data.tracked.length;
+    }
+  } catch (err) {
+    // Silently fail
   }
 }
 
@@ -307,87 +497,6 @@ async function refreshData() {
   }
 }
 
-async function showTrackedCoins() {
-  try {
-    var response = await fetch('/api/tracked');
-    var data = await response.json();
-
-    if (!data.success) {
-      throw new Error(data.error);
-    }
-
-    var modal = document.getElementById('historyModal');
-    var body = document.getElementById('historyBody');
-
-    if (data.tracked.length === 0) {
-      body.innerHTML = '<div class="empty-state"><div class="icon">📊</div><h3>Belum ada koin di-track</h3><p>Centang koin di Top 5 lalu pilih mode tracking</p></div>';
-    } else {
-      body.innerHTML = '<div class="tracked-coins-list">' + data.tracked.map(function(item) {
-        var isEntry = item.tracking_mode === 'entry';
-        var modeBadge = isEntry
-          ? '<span class="mode-badge mode-entry">📈 Entry</span>'
-          : '<span class="mode-badge mode-cmc">🌐 CMC</span>';
-
-        var performanceHtml = '';
-        if (isEntry) {
-          if (item.entry_performance) {
-            var pct = item.entry_performance.price_change_percent;
-            var pctClass = pct >= 0 ? 'positive' : 'negative';
-            performanceHtml =
-              '<div class="tracked-coin-performance">' +
-              '<div class="price">' + formatPrice(item.entry_performance.latest_price) + '</div>' +
-              '<div class="entry-label">Entry: ' + formatPrice(item.entry_performance.entry_price) + '</div>' +
-              '<div class="' + pctClass + ' entry-pct">' + formatPercent(pct) + ' sejak entry</div>' +
-              '</div>';
-          } else {
-            performanceHtml =
-              '<div class="tracked-coin-performance">' +
-              '<div class="entry-label">Entry: ' + (item.entry_price ? formatPrice(item.entry_price) : '-') + '</div>' +
-              '<div style="color:#94a3b8;font-size:0.8rem">Belum ada snapshot</div>' +
-              '</div>';
-          }
-        } else {
-          if (item.latest_snapshot) {
-            var c7d = item.latest_snapshot.percent_change_7d;
-            var c24h = item.latest_snapshot.percent_change_24h;
-            performanceHtml =
-              '<div class="tracked-coin-performance">' +
-              '<div class="price">' + formatPrice(item.latest_snapshot.price) + '</div>' +
-              '<div class="' + (c7d >= 0 ? 'positive' : 'negative') + '">7d: ' + formatPercent(c7d) + '</div>' +
-              '<div class="' + (c24h >= 0 ? 'positive' : 'negative') + '">24h: ' + formatPercent(c24h) + '</div>' +
-              '</div>';
-          } else {
-            performanceHtml = '<div class="tracked-coin-performance"><p>Belum ada snapshot</p></div>';
-          }
-        }
-
-        return '<div class="tracked-coin-item">' +
-          '<div onclick="showCoinHistory(' + item.id + ', \'' + item.symbol + '\')" style="flex:1;cursor:pointer;display:flex;align-items:center;gap:0.75rem">' +
-          '<img src="' + item.logo + '" alt="' + item.symbol + '" class="tracked-coin-logo" onerror="this.src=\'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E🪙%3C/text%3E%3C/svg%3E\'">' +
-          '<div class="tracked-coin-info">' +
-          '<h3>' + item.name + ' (' + item.symbol + ') ' + modeBadge + '</h3>' +
-          '<p>Added: ' + formatTimestamp(item.added_at) + '</p>' +
-          '<p>Snapshots: ' + (item.snapshot_count || 0) + '</p>' +
-          '</div>' +
-          '</div>' +
-          performanceHtml +
-          '<button class="untrack-btn" onclick="untrackCoin(' + item.id + ', \'' + item.symbol + '\', event)">Untrack</button>' +
-          '</div>';
-      }).join('') + '</div>';
-    }
-
-    modal.style.display = 'block';
-  } catch (err) {
-    Swal.fire({
-      icon: 'error',
-      title: 'Failed to load tracked coins',
-      text: err.message,
-      background: '#1e293b',
-      color: '#f8fafc'
-    });
-  }
-}
-
 async function untrackCoin(coinId, symbol, event) {
   event.stopPropagation();
 
@@ -425,7 +534,9 @@ async function untrackCoin(coinId, symbol, event) {
         color: '#f8fafc'
       });
 
-      showTrackedCoins();
+      // Reload tracked tab
+      loadTrackedCoins();
+      updateTrackedCount();
     })
     .catch(function(err) {
       Swal.fire({

@@ -16,39 +16,74 @@
       <p class="subtitle">Sistem Lacak Koin Berpotensi Naik</p>
     </header>
 
-    <div class="stats-bar" id="stats">
-      <div class="stat">
-        <span class="stat-label">Timestamp</span>
-        <span class="stat-value" id="timestamp">-</span>
-      </div>
-      <div class="stat">
-        <span class="stat-label">Universe</span>
-        <span class="stat-value" id="universe">-</span>
-      </div>
-      <div class="stat">
-        <span class="stat-label">Lolos Filter</span>
-        <span class="stat-value" id="filtered">-</span>
-      </div>
-      <div class="stat">
-        <span class="stat-label">Cache Age</span>
-        <span class="stat-value" id="cacheAge">-</span>
-      </div>
-    </div>
-
-    <div class="refresh-btn-container">
-      <button id="refreshBtn" onclick="refreshData()">
-        <span class="icon">🔄</span> Refresh Data
+    <!-- Tab Navigation -->
+    <div class="tab-nav">
+      <button class="tab-btn active" data-tab="top5" onclick="switchTab('top5')">
+        <span class="icon">🏆</span> Top 5
       </button>
-      <button id="trackedBtn" onclick="showTrackedCoins()">
-        <span class="icon">📊</span> Tracked Coins
+      <button class="tab-btn" data-tab="tracked" onclick="switchTab('tracked')">
+        <span class="icon">📊</span> Tracked <span id="trackedCount" class="tab-count">0</span>
       </button>
     </div>
 
-    <div class="coins-container" id="coinsContainer">
-      <div class="loading">Loading...</div>
+    <!-- Tab: Top 5 -->
+    <div class="tab-content active" id="tab-top5">
+      <div class="stats-bar" id="stats">
+        <div class="stat">
+          <span class="stat-label">Timestamp</span>
+          <span class="stat-value" id="timestamp">-</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Universe</span>
+          <span class="stat-value" id="universe">-</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Lolos Filter</span>
+          <span class="stat-value" id="filtered">-</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Cache Age</span>
+          <span class="stat-value" id="cacheAge">-</span>
+        </div>
+      </div>
+
+      <div class="refresh-btn-container">
+        <button id="refreshBtn" onclick="refreshData()">
+          <span class="icon">🔄</span> Refresh Data
+        </button>
+      </div>
+
+      <div class="coins-container" id="coinsContainer">
+        <div class="loading">Loading...</div>
+      </div>
     </div>
 
-    <!-- History Modal -->
+    <!-- Tab: Tracked Coins -->
+    <div class="tab-content" id="tab-tracked">
+      <div class="tracked-header">
+        <div class="stats-bar" id="trackedStats">
+          <div class="stat">
+            <span class="stat-label">Total Tracked</span>
+            <span class="stat-value" id="trackedTotal">0</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Total Snapshots</span>
+            <span class="stat-value" id="snapshotsTotal">0</span>
+          </div>
+        </div>
+        <div class="refresh-btn-container">
+          <button id="refreshTrackedBtn" onclick="refreshTrackedCoins()">
+            <span class="icon">🔄</span> Refresh
+          </button>
+        </div>
+      </div>
+
+      <div class="tracked-container" id="trackedContainer">
+        <div class="loading">Loading...</div>
+      </div>
+    </div>
+
+    <!-- History Modal (untuk detail per coin) -->
     <div id="historyModal" class="modal">
       <div class="modal-content">
         <div class="modal-header">
