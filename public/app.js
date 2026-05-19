@@ -194,6 +194,7 @@ function startRefreshCooldown(btn) {
 }
 
 function formatCurrency(value) {
+  if (value === null || value === undefined) return '-';
   if (value >= 1e12) return '$' + (value / 1e12).toFixed(2) + 'T';
   if (value >= 1e9) return '$' + (value / 1e9).toFixed(1) + 'B';
   if (value >= 1e6) return '$' + (value / 1e6).toFixed(1) + 'M';
@@ -202,12 +203,14 @@ function formatCurrency(value) {
 }
 
 function formatPrice(price) {
+  if (price === null || price === undefined) return '-';
   if (price >= 1) return '$' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   if (price >= 0.01) return '$' + price.toFixed(4);
   return '$' + price.toFixed(8);
 }
 
 function formatPercent(value) {
+  if (value === null || value === undefined) return '-';
   var sign = value >= 0 ? '+' : '';
   return sign + value.toFixed(1) + '%';
 }
@@ -596,7 +599,10 @@ async function showCoinHistory(coinId, symbol) {
       }
 
       var tableRows = data.snapshots.map(function(s) {
-        return '<tr><td>' + formatTimestamp(s.timestamp) + '</td><td>' + formatPrice(s.price) + '</td><td class="' + (s.percent_change_7d >= 0 ? 'positive' : 'negative') + '">' + formatPercent(s.percent_change_7d) + '</td><td class="' + (s.percent_change_24h >= 0 ? 'positive' : 'negative') + '">' + formatPercent(s.percent_change_24h) + '</td><td>' + formatCurrency(s.volume_24h) + '</td><td>' + s.score.toFixed(1) + '</td></tr>';
+        var scoreDisplay = s.score !== null ? s.score.toFixed(1) : '-';
+        var c7d = s.percent_change_7d;
+        var c24h = s.percent_change_24h;
+        return '<tr><td>' + formatTimestamp(s.timestamp) + '</td><td>' + formatPrice(s.price) + '</td><td class="' + (c7d >= 0 ? 'positive' : 'negative') + '">' + (c7d !== null ? formatPercent(c7d) : '-') + '</td><td class="' + (c24h >= 0 ? 'positive' : 'negative') + '">' + (c24h !== null ? formatPercent(c24h) : '-') + '</td><td>' + formatCurrency(s.volume_24h) + '</td><td>' + scoreDisplay + '</td></tr>';
       }).join('');
 
       body.innerHTML = performanceHtml + '<table class="history-table"><thead><tr><th>Date</th><th>Price</th><th>7d Change</th><th>24h Change</th><th>Volume</th><th>Score</th></tr></thead><tbody>' + tableRows + '</tbody></table>';
