@@ -4,6 +4,29 @@ var refreshCooldown = 30; // seconds
 var refreshCountdownInterval = null;
 var currentTab = 'top5';
 
+// Loading Overlay Functions
+function showLoading(message) {
+  var overlay = document.getElementById('loadingOverlay');
+  var loadingText = overlay.querySelector('.loading-text');
+  if (message) {
+    loadingText.textContent = message;
+  }
+  overlay.classList.add('active');
+
+  // Disable all interactions
+  document.body.style.pointerEvents = 'none';
+  document.body.style.userSelect = 'none';
+}
+
+function hideLoading() {
+  var overlay = document.getElementById('loadingOverlay');
+  overlay.classList.remove('active');
+
+  // Re-enable interactions
+  document.body.style.pointerEvents = '';
+  document.body.style.userSelect = '';
+}
+
 // Tab Navigation
 function switchTab(tabName) {
   currentTab = tabName;
@@ -130,8 +153,7 @@ async function refreshTrackedCoins() {
   var btn = document.getElementById('refreshTrackedBtn');
   if (btn.disabled) return;
 
-  btn.classList.add('loading');
-  btn.disabled = true;
+  showLoading('Refreshing tracked coins & saving snapshots...');
 
   try {
     // First refresh the data from CMC
@@ -171,8 +193,7 @@ async function refreshTrackedCoins() {
       color: '#f8fafc'
     });
   } finally {
-    btn.classList.remove('loading');
-    btn.disabled = false;
+    hideLoading();
   }
 }
 
@@ -408,6 +429,8 @@ function updateStats(data) {
 }
 
 async function fetchData() {
+  showLoading('Loading initial data...');
+
   try {
     var response = await fetch('/api/top5');
     var data = await response.json();
@@ -436,6 +459,8 @@ async function fetchData() {
       background: '#1e293b',
       color: '#f8fafc'
     });
+  } finally {
+    hideLoading();
   }
 }
 
@@ -456,8 +481,7 @@ async function refreshData() {
   var btn = document.getElementById('refreshBtn');
   if (btn.disabled) return;
 
-  btn.classList.add('loading');
-  btn.disabled = true;
+  showLoading('Fetching data from CMC API...');
 
   try {
     var response = await fetch('/api/refresh', { method: 'POST' });
@@ -495,7 +519,7 @@ async function refreshData() {
       color: '#f8fafc'
     });
   } finally {
-    btn.classList.remove('loading');
+    hideLoading();
     startRefreshCooldown(btn);
   }
 }
@@ -572,6 +596,16 @@ async function showCoinHistory(coinId, symbol) {
     if (data.snapshots.length === 0) {
       body.innerHTML = '<div class="empty-state"><p>Belum ada snapshot. Refresh data untuk mulai tracking.</p></div>';
     } else {
+      // Coin info header with logo
+      var coinInfoHtml =
+        '<div class="coin-info-header">' +
+          '<img src="' + data.logo + '" alt="' + data.symbol + '" class="coin-info-logo" onerror="this.src=\'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E🪙%3C/text%3E%3C/svg%3E\'">' +
+          '<div class="coin-info-details">' +
+            '<h2 class="coin-info-name">' + data.name + ' <span class="coin-info-symbol">(' + data.symbol + ')</span></h2>' +
+            '<p class="coin-info-meta">Added: ' + formatTimestamp(data.added_at) + ' • Snapshots: ' + data.snapshots.length + '</p>' +
+          '</div>' +
+        '</div>';
+
       var performanceHtml = '';
 
       if (data.tracking_mode === 'entry' && data.entry_performance) {
@@ -605,7 +639,7 @@ async function showCoinHistory(coinId, symbol) {
         return '<tr><td>' + formatTimestamp(s.timestamp) + '</td><td>' + formatPrice(s.price) + '</td><td class="' + (c7d >= 0 ? 'positive' : 'negative') + '">' + (c7d !== null ? formatPercent(c7d) : '-') + '</td><td class="' + (c24h >= 0 ? 'positive' : 'negative') + '">' + (c24h !== null ? formatPercent(c24h) : '-') + '</td><td>' + formatCurrency(s.volume_24h) + '</td><td>' + scoreDisplay + '</td></tr>';
       }).join('');
 
-      body.innerHTML = performanceHtml + '<table class="history-table"><thead><tr><th>Date</th><th>Price</th><th>7d Change</th><th>24h Change</th><th>Volume</th><th>Score</th></tr></thead><tbody>' + tableRows + '</tbody></table>';
+      body.innerHTML = coinInfoHtml + performanceHtml + '<table class="history-table"><thead><tr><th>Date</th><th>Price</th><th>7d Change</th><th>24h Change</th><th>Volume</th><th>Score</th></tr></thead><tbody>' + tableRows + '</tbody></table>';
     }
 
     modal.style.display = 'block';

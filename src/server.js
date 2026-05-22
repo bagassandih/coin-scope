@@ -264,9 +264,16 @@ app.get('/api/history/:coinId', async (req, res) => {
       };
     }
 
+    // Construct logo URL from CMC ID
+    const logo = coinTracking?.logo || `https://s2.coinmarketcap.com/static/img/coins/64x64/${id}.png`;
+
     res.json({
       success: true,
       coinId: id,
+      name: coinTracking?.name || null,
+      symbol: coinTracking?.symbol || null,
+      logo,
+      added_at: coinTracking?.added_at || null,
       snapshots,
       performance,
       tracking_mode,

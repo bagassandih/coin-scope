@@ -98,8 +98,22 @@
 
     <footer>
       <p>⚠️ Bukan rekomendasi investasi. Ini scoring berbasis momentum historis.</p>
-      <p class="disclaimer">Data dari CoinMarketCap API | v1.1 Scoring: 30% 7d + 15% 30d + 30% Volume + 20% MCap Tier + 5% 24h</p>
+      <p class="disclaimer">Data dari CoinMarketCap API | v1.2 Scoring: 12% 7d + 48% 30d + 25% Volume + 10% MCap Tier + 5% 24h + Healthy Bonus</p>
     </footer>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-content">
+      <div class="loading-spinner">
+        <div class="spinner-ring"></div>
+        <div class="spinner-ring"></div>
+        <div class="spinner-ring"></div>
+        <div class="spinner-ring"></div>
+      </div>
+      <p class="loading-text">Fetching data from CMC API...</p>
+      <p class="loading-subtext">Mohon tunggu, proses tidak bisa dibatalkan</p>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
