@@ -314,59 +314,58 @@ function verifyGitHubSignature(payload, signature) {
 }
 
 app.post('/webhook/github', async (req, res) => {
-  try {
-    // Verify webhook signature
-    const signature = req.headers['x-hub-signature-256'];
-    if (!signature) {
-      console.log('⚠️  Webhook: No signature provided');
-      return res.status(401).json({ error: 'No signature provided' });
-    }
+  // Verify webhook signature FIRST (before any async work)
+  const signature = req.headers['x-hub-signature-256'];
+  if (!signature) {
+    console.log('⚠️  Webhook: No signature provided');
+    return res.status(401).json({ error: 'No signature provided' });
+  }
 
-    const payload = JSON.stringify(req.body);
-    if (!verifyGitHubSignature(payload, signature)) {
-      console.log('⚠️  Webhook: Invalid signature');
-      return res.status(401).json({ error: 'Invalid signature' });
-    }
+  const payload = JSON.stringify(req.body);
+  if (!verifyGitHubSignature(payload, signature)) {
+    console.log('⚠️  Webhook: Invalid signature');
+    return res.status(401).json({ error: 'Invalid signature' });
+  }
 
-    // Check if this is a push event
-    if (req.headers['x-github-event'] !== 'push') {
-      return res.json({ message: 'Event ignored, only push events trigger deploy' });
-    }
+  // Check if this is a push event
+  if (req.headers['x-github-event'] !== 'push') {
+    return res.json({ message: 'Event ignored, only push events trigger deploy' });
+  }
 
-    console.log('🔄 Webhook received! Starting deployment...');
+  // Send response IMMEDIATELY (202 Accepted)
+  // GitHub gets quick response, deployment continues in background
+  res.status(202).json({
+    success: true,
+    message: 'Webhook received! Deployment started in background...',
+    receivedAt: new Date().toISOString()
+  });
 
-    // Get the repository path (parent of src/)
-    const repoPath = process.cwd();
+  // Process deployment asynchronously (don't block response)
+  setImmediate(async () => {
+    try {
+      console.log('🔄 Webhook received! Starting deployment...');
 
-    // Execute git pull
-    console.log('📥 Pulling latest code...');
-    const { stdout: pullOutput } = await execAsync('git pull', { cwd: repoPath });
-    console.log(pullOutput);
+      const repoPath = process.cwd();
 
-    // Check if package.json changed
-    const packageChanged = pullOutput.includes('package.json');
+      // Execute git pull
+      console.log('📥 Pulling latest code...');
+      const { stdout: pullOutput } = await execAsync('git pull', { cwd: repoPath });
+      console.log(pullOutput);
 
-    // Install dependencies if package.json changed
-    if (packageChanged) {
-      console.log('📦 Installing dependencies...');
-      const { stdout: installOutput } = await execAsync('npm install', { cwd: repoPath });
-      console.log(installOutput);
-    }
+      // Check if package.json changed
+      const packageChanged = pullOutput.includes('package.json');
 
-    // Check if running under PM2
-    const isPM2 = process.env.PM2_HOME || process.env.NODE_ENV === 'production' || packageChanged;
+      // Install dependencies if package.json changed
+      if (packageChanged) {
+        console.log('📦 Installing dependencies...');
+        const { stdout: installOutput } = await execAsync('npm install', { cwd: repoPath });
+        console.log(installOutput);
+      }
 
-    if (isPM2) {
-      // Auto-restart with PM2
-      res.json({
-        success: true,
-        message: 'Code updated! Restarting with PM2...',
-        changes: pullOutput.trim(),
-        dependenciesInstalled: packageChanged,
-        restartMode: 'pm2'
-      });
+      // Check if running under PM2
+      const isPM2 = process.env.PM2_HOME || process.env.NODE_ENV === 'production' || packageChanged;
 
-      setTimeout(async () => {
+      if (isPM2) {
         console.log('🔄 Restarting with PM2...');
         try {
           await execAsync('pm2 reload coinscope || pm2 restart coinscope', {
@@ -376,32 +375,19 @@ app.post('/webhook/github', async (req, res) => {
         } catch (err) {
           console.error('❌ PM2 restart failed:', err.message);
         }
-      }, WEBHOOK_RESTART_DELAY);
-    } else {
-      // Manual mode (development/laptop)
-      res.json({
-        success: true,
-        message: 'Code updated! To restart: pkill -f "node src/server.js" && npm start',
-        changes: pullOutput.trim(),
-        dependenciesInstalled: packageChanged,
-        restartMode: 'manual'
-      });
-
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log('✅ Webhook completed! Code is now up to date.');
-      console.log('📝 To apply changes, restart manually:');
-      console.log('   pkill -f "node src/server.js" && npm start');
-      console.log('ℹ️  Running in Manual Mode (not PM2)');
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      } else {
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('✅ Deployment completed! Code is now up to date.');
+        console.log('📝 To apply changes, restart manually:');
+        console.log('   pkill -f "node src/server.js" && npm start');
+        console.log('ℹ️  Running in Manual Mode (not PM2)');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      }
+    } catch (err) {
+      console.error('❌ Webhook deployment error:', err.message);
+      console.error(err.stack);
     }
-
-  } catch (err) {
-    console.error('❌ Webhook error:', err.message);
-    res.status(500).json({
-      success: false,
-      error: err.message
-    });
-  }
+  });
 });
 
 app.listen(PORT, () => {
