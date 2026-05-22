@@ -11,9 +11,17 @@ import {
   displayFilterStats,
 } from './display.js';
 
+// WIB Timestamp helper
+function getWIBTimestamp() {
+  const now = new Date();
+  const wibTime = new Date(now.getTime() + (7 * 60 * 60 * 1000));
+  return wibTime.toISOString().replace('T', ' ').slice(0, 19) + ' WIB';
+}
+
 async function main() {
   try {
-    console.log(chalk.cyan('\n🪙 CoinScope v1.0 - Sistem Lacak Koin Berpotensi Naik\n'));
+    console.log(chalk.cyan(`\n🪙 CoinScope v1.2 - Sistem Lacak Koin Berpotensi Naik`));
+    console.log(chalk.gray(`⏰ ${getWIBTimestamp()}\n`));
 
     // Step 1: Fetch Universe
     const rawData = await fetchCoins();
@@ -60,7 +68,7 @@ async function main() {
     displayFooter();
 
   } catch (err) {
-    console.error(chalk.red(`\n❌ Error: ${err.message}`));
+    console.error(chalk.red(`\n❌ Error [${getWIBTimestamp()}]: ${err.message}`));
     process.exit(1);
   }
 }

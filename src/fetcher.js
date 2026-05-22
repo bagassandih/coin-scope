@@ -2,6 +2,14 @@ import axios from 'axios';
 import { config } from './config.js';
 import { getCachedData, setCachedData, getCacheAge } from './cache.js';
 
+// WIB Timestamp helper
+function logFetch(message) {
+  const now = new Date();
+  const wibTime = new Date(now.getTime() + (7 * 60 * 60 * 1000));
+  const timestamp = wibTime.toISOString().replace('T', ' ').slice(0, 19) + ' WIB';
+  console.log(`[${timestamp}] ${message}`);
+}
+
 // Retry with exponential backoff
 async function fetchWithRetry(url, options, maxRetries = 3) {
   for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -26,7 +34,7 @@ async function fetchWithRetry(url, options, maxRetries = 3) {
       }
 
       const delay = Math.pow(2, attempt) * 1000;
-      console.log(`  Retry ${attempt + 1}/${maxRetries} in ${delay}ms...`);
+      logFetch(`  🔄 Retry ${attempt + 1}/${maxRetries} in ${delay}ms...`);
       await sleep(delay);
     }
   }
@@ -41,11 +49,11 @@ export async function fetchCoins() {
   if (cached) {
     const age = getCacheAge();
     const mins = Math.floor(age / 60);
-    console.log(`  Using cached data (${mins}m old)`);
+    logFetch(`  💾 Using cached data (${mins}m old)`);
     return cached.data;
   }
 
-  console.log('  Fetching from CMC API...');
+  logFetch('  🌐 Fetching from CMC API...');
 
   const url = `${config.cmcApiUrl}/cryptocurrency/listings/latest`;
   const options = {
@@ -62,6 +70,7 @@ export async function fetchCoins() {
   const data = await fetchWithRetry(url, options);
   setCachedData(data);
 
+  logFetch('  ✅ Data fetched and cached');
   return data;
 }
 

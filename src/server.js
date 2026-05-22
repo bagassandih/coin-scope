@@ -29,6 +29,14 @@ const execAsync = promisify(exec);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// WIB Timestamp helper
+function log(message) {
+  const now = new Date();
+  const wibTime = new Date(now.getTime() + (7 * 60 * 60 * 1000));
+  const timestamp = wibTime.toISOString().replace('T', ' ').slice(0, 19) + ' WIB';
+  console.log(`[${timestamp}] ${message}`);
+}
+
 // Constants
 const WEBHOOK_SECRET = process.env.GITHUB_WEBHOOK_SECRET || 'change-me-in-production';
 const WEBHOOK_RESTART_DELAY = 1000;
@@ -104,7 +112,7 @@ app.get('/api/top5', async (req, res) => {
       top5: top5.map((coin, index) => mapCoinResponse(coin, index, trackedIds)),
     });
   } catch (err) {
-    console.error('Error:', err.message);
+    log(`❌ Error: ${err.message}`);
     console.error(err.stack);
     res.status(500).json({
       success: false,
@@ -160,7 +168,7 @@ app.post('/api/refresh', async (req, res) => {
       const allTracked = [...trackedInScored, ...trackedNotScored];
       if (allTracked.length > 0) {
         await saveSnapshot(allTracked);
-        console.log(`  Saved snapshot for ${allTracked.length} tracked coin(s) (${trackedInScored.length} scored, ${trackedNotScored.length} unfiltered)`);
+        log(`  📸 Saved snapshot for ${allTracked.length} tracked coin(s) (${trackedInScored.length} scored, ${trackedNotScored.length} unfiltered)`);
       }
     }
 
@@ -173,7 +181,7 @@ app.post('/api/refresh', async (req, res) => {
       top5: top5.map((coin, index) => mapCoinResponse(coin, index, trackedIds)),
     });
   } catch (err) {
-    console.error('Error:', err.message);
+    log(`❌ Error: ${err.message}`);
     console.error(err.stack);
     res.status(500).json({
       success: false,
@@ -478,13 +486,13 @@ app.post('/webhook/github', async (req, res) => {
   // Verify webhook signature FIRST (before any async work)
   const signature = req.headers['x-hub-signature-256'];
   if (!signature) {
-    console.log('⚠️  Webhook: No signature provided');
+    log('⚠️  Webhook: No signature provided');
     return res.status(401).json({ error: 'No signature provided' });
   }
 
   const payload = JSON.stringify(req.body);
   if (!verifyGitHubSignature(payload, signature)) {
-    console.log('⚠️  Webhook: Invalid signature');
+    log('⚠️  Webhook: Invalid signature');
     return res.status(401).json({ error: 'Invalid signature' });
   }
 
@@ -511,9 +519,9 @@ app.post('/webhook/github', async (req, res) => {
     env: { ...process.env }
   }).unref();
 
-  console.log('🔄 Webhook received! Deployment running in background...');
+  log('🔄 Webhook received! Deployment running in background...');
 });
 
 app.listen(PORT, () => {
-  console.log(`\n🌐 CoinScope UI running at http://localhost:${PORT}\n`);
+  log(`🌐 CoinScope UI running at http://localhost:${PORT}`);
 });
