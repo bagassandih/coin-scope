@@ -1,5 +1,84 @@
 # CoinScope - Changelog & Implementation Notes
 
+## v1.2 - Hold Strategy Optimization (22 Mei 2026)
+
+---
+
+### Problem Statement
+
+Algoritma v1.1 memberikan score tinggi pada koin **pump & dump** seperti BOBO:
+- 7d Change: +2266.3% (sudah pump)
+- 24h Change: -83.3% (dump drastis)
+- Score: 61.4 (#1)
+
+**Ini tidak sesuai dengan goal:** "buy → hold 1 bulan → exit"
+
+---
+
+### 1. Scoring Weights Rebalance
+
+| Metrik | v1.1 | v1.2 | Perubahan |
+|--------|------|------|-----------|
+| 7d Change | 30% | **12%** | ↓ Too short-term |
+| **30d Trend** | 15% | **48%** | ↑ Primary signal |
+| Volume | 30% | **25%** | ↓ Still important |
+| Market Cap Tier | 20% | **10%** | ↓ Less weight |
+| 24h Change | 5% | **5%** | = Noise |
+| **Healthy Trend Bonus** | - | **+20** | NEW |
+
+**Alasan:**
+- 30d lebih merepresentasikan tren sehat untuk holding
+- 7d terlalu volatile, easily manipulated
+- Bonus untuk tren sehat (steady rise, bukan pump)
+
+---
+
+### 2. Pump & Dump Filter
+
+```javascript
+// Filter out koin dengan pattern pump & dump
+if (7d_change > 100% && 24h_change < -30%) {
+  return false; // Skip
+}
+```
+
+**Impact:** BOBO (+2266% / -83%) tidak lagi masuk Top 5
+
+---
+
+### 3. Healthy Trend Bonus
+
+```javascript
+// Reward koin dengan tren sehat untuk holding
+if (7d > 0 && 7d < 50% && 30d > 0) {
+  score += 20; // Steady rise, not pumped
+}
+```
+
+**Kriteria tren sehat:**
+- 7d positif (tren naik)
+- 7d < 50% (tidak extreme)
+- 30d positif (konfirmasi tren bulanan)
+
+---
+
+### 4. Before vs After
+
+| Koin | v1.1 Score | v1.2 Status | Alasan |
+|------|------------|-------------|--------|
+| **BOBO** | 61.4 (#1) | ❌ **Filtered** | Pump & dump pattern |
+| **PROVE** | 53.5 (#2) | ✅ #3 | Tren sehat, lolos |
+| **ALT** | 39.6 (#4) | ✅ #5 | Steady rise |
+
+---
+
+### 5. File Changes
+
+- `src/config.js` — Update weights untuk v1.2
+- `src/scorer.js` — Add `isPumpAndDump()`, `hasHealthyTrend()`, filter logic
+
+---
+
 ## v1.1.1 - Supabase Integration (19 Mei 2026)
 
 ---

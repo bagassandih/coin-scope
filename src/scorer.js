@@ -26,14 +26,32 @@ function getVolumeRatio(coin) {
   return coin.volume_24h / (coin.market_cap * 0.01);
 }
 
+// Check if coin matches pump & dump pattern (v1.2)
+function isPumpAndDump(coin) {
+  const isPumped = coin.percent_change_7d > 100;  // 7d naik > 100%
+  const isDumping = coin.percent_change_24h < -30; // 24h turun > 30%
+  return isPumped && isDumping;
+}
+
+// Check if coin has healthy trend for holding (v1.2)
+function hasHealthyTrend(coin) {
+  const isPositive7d = coin.percent_change_7d > 0;
+  const isNotExtreme = coin.percent_change_7d < 50;  // 7d < 50% (not pumped)
+  const isPositive30d = coin.percent_change_30d > 0; // 30d confirms trend
+  return isPositive7d && isNotExtreme && isPositive30d;
+}
+
 export function calculateScores(coins) {
   if (coins.length === 0) return [];
 
-  // Find min/max for normalization
-  const change7dValues = coins.map(c => c.percent_change_7d);
-  const change24hValues = coins.map(c => c.percent_change_24h);
-  const change30dValues = coins.map(c => c.percent_change_30d);
-  const volumeRatios = coins.map(c => getVolumeRatio(c));
+  // Filter out pump & dump patterns (v1.2)
+  const filteredCoins = coins.filter(coin => !isPumpAndDump(coin));
+
+  // Find min/max for normalization (use filtered coins)
+  const change7dValues = filteredCoins.map(c => c.percent_change_7d);
+  const change24hValues = filteredCoins.map(c => c.percent_change_24h);
+  const change30dValues = filteredCoins.map(c => c.percent_change_30d);
+  const volumeRatios = filteredCoins.map(c => getVolumeRatio(c));
 
   const min7d = Math.min(...change7dValues);
   const max7d = Math.max(...change7dValues);
@@ -44,7 +62,7 @@ export function calculateScores(coins) {
   const minVol = Math.min(...volumeRatios);
   const maxVol = Math.max(...volumeRatios);
 
-  return coins.map(coin => {
+  return filteredCoins.map(coin => {
     const tier = getMarketCapTierScore(coin.market_cap);
     const volumeRatio = getVolumeRatio(coin);
 
@@ -61,12 +79,16 @@ export function calculateScores(coins) {
       s30d = normalize(coin.percent_change_30d, min30d, max30d);
     }
 
+    // Healthy trend bonus (v1.2)
+    const healthyBonus = hasHealthyTrend(coin) ? weights.healthyTrendBonus : 0;
+
     const weightedScore =
       (s7d * weights.change7d) +
       (s30d * weights.change30d) +
       (sVol * weights.volume) +
       (sMcap * weights.marketCapTier) +
-      (s24h * weights.change24h);
+      (s24h * weights.change24h) +
+      healthyBonus;
 
     return {
       ...coin,
@@ -78,6 +100,7 @@ export function calculateScores(coins) {
       s30d,
       sVol,
       sMcap,
+      healthyBonus,
       weightedScore: Math.round(weightedScore * 10) / 10,
     };
   });

@@ -20,13 +20,14 @@ if (!config.cmcApiKey) {
   throw new Error('CMC_API_KEY is required. Set it in .env file');
 }
 
-// Scoring weights (v1.1 - updated for 30d confirmation)
+// Scoring weights (v1.2 - optimized for 1-month hold strategy)
 export const weights = {
-  change7d: 0.30,      // Reduced from 40%
-  change30d: 0.15,     // NEW: 30d trend confirmation
-  volume: 0.30,        // Unchanged
-  marketCapTier: 0.20, // Unchanged
-  change24h: 0.05,     // Reduced from 10%
+  change7d: 0.12,      // Reduced: 7d too short-term, easily manipulated
+  change30d: 0.48,     // Increased: 30d confirms healthy trend for holding
+  volume: 0.25,        // Reduced: still important but less than trend
+  marketCapTier: 0.10, // Reduced: risk management
+  change24h: 0.05,     // Unchanged: minimal signal
+  healthyTrendBonus: 20, // NEW: bonus for steady rise (not pump & dump)
 };
 
 // Hard filter thresholds
