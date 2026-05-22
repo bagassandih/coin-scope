@@ -22,7 +22,56 @@ export async function getTrackedCoins() {
   const { data, error } = await supabase
     .from('tracked_coins')
     .select('*')
+    .eq('status', 'active')
     .order('added_at', { ascending: false });
+
+  if (error) throw error;
+  return data;
+}
+
+export async function getClosedPositions(filterReason = null) {
+  let query = supabase
+    .from('tracked_coins')
+    .select('*')
+    .eq('status', 'closed')
+    .order('closed_at', { ascending: false });
+
+  if (filterReason && filterReason !== 'all') {
+    query = query.eq('close_reason', filterReason);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data;
+}
+
+export async function closePosition(coinId, reason) {
+  const { data, error } = await supabase
+    .from('tracked_coins')
+    .update({
+      status: 'closed',
+      closed_at: new Date().toISOString(),
+      close_reason: reason,
+    })
+    .eq('id', coinId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function resumePosition(coinId) {
+  const { data, error } = await supabase
+    .from('tracked_coins')
+    .update({
+      status: 'active',
+      closed_at: null,
+      close_reason: null,
+    })
+    .eq('id', coinId)
+    .select()
+    .single();
 
   if (error) throw error;
   return data;

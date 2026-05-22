@@ -25,6 +25,9 @@
       <button class="tab-btn" data-tab="tracked" onclick="switchTab('tracked')">
         <span class="icon">📊</span> Tracked <span id="trackedCount" class="tab-count">0</span>
       </button>
+      <button class="tab-btn" data-tab="closed" onclick="switchTab('closed')">
+        <span class="icon">✅</span> Closed <span id="closedCount" class="tab-count">0</span>
+      </button>
     </div>
 
     <!-- Tab: Top 5 -->
@@ -84,6 +87,24 @@
       </div>
     </div>
 
+    <!-- Tab: Closed Positions -->
+    <div class="tab-content" id="tab-closed">
+      <div class="closed-header">
+        <div class="filter-bar" id="filterBar">
+          <span class="filter-label">Filter:</span>
+          <button class="filter-btn active" data-filter="all" onclick="filterClosed('all')">All</button>
+          <button class="filter-btn" data-filter="take_profit" onclick="filterClosed('take_profit')">Take Profit</button>
+          <button class="filter-btn" data-filter="cutloss" onclick="filterClosed('cutloss')">Cutloss</button>
+          <button class="filter-btn" data-filter="stagnant" onclick="filterClosed('stagnant')">Stagnan/Boring</button>
+          <button class="filter-btn" data-filter="other" onclick="filterClosed('other')">Other</button>
+        </div>
+      </div>
+
+      <div class="closed-container" id="closedContainer">
+        <div class="loading">Loading...</div>
+      </div>
+    </div>
+
     <!-- History Modal (untuk detail per coin) -->
     <div id="historyModal" class="modal">
       <div class="modal-content">
@@ -93,6 +114,44 @@
         </div>
         <div class="modal-body" id="historyBody">
           <div class="loading">Loading...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Close Position Modal -->
+    <div id="closeModal" class="modal">
+      <div class="modal-content modal-small">
+        <div class="modal-header">
+          <h2>Close Position</h2>
+          <span class="close" onclick="closeCloseModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div id="closeModalContent">
+            <p>Why are you closing this position?</p>
+            <div class="close-reasons">
+              <label class="close-reason-option">
+                <input type="radio" name="closeReason" value="take_profit">
+                <span>🎯 Take Profit</span>
+              </label>
+              <label class="close-reason-option">
+                <input type="radio" name="closeReason" value="cutloss">
+                <span>📉 Cutloss</span>
+              </label>
+              <label class="close-reason-option">
+                <input type="radio" name="closeReason" value="stagnant">
+                <span>😴 Stagnan/Boring</span>
+              </label>
+              <label class="close-reason-option">
+                <input type="radio" name="closeReason" value="other">
+                <span>📝 Other: </span>
+                <input type="text" id="closeReasonOther" class="other-input" placeholder="specify..." disabled>
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" onclick="closeCloseModal()">Cancel</button>
+          <button class="btn-primary" onclick="confirmClosePosition()">Close Position</button>
         </div>
       </div>
     </div>

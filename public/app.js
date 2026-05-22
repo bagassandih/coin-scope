@@ -31,6 +31,9 @@ function hideLoading() {
 function switchTab(tabName) {
   currentTab = tabName;
 
+  // Save to localStorage
+  localStorage.setItem('coinscope_active_tab', tabName);
+
   // Update tab buttons
   document.querySelectorAll('.tab-btn').forEach(function(btn) {
     btn.classList.remove('active');
@@ -48,6 +51,8 @@ function switchTab(tabName) {
   // Load data for the tab
   if (tabName === 'tracked') {
     loadTrackedCoins();
+  } else if (tabName === 'closed') {
+    loadClosedPositions();
   }
 }
 
@@ -95,13 +100,16 @@ async function loadTrackedCoins() {
 
         var performanceHtml = '';
         if (isEntry) {
-          if (item.entry_performance) {
-            var pct = item.entry_performance.price_change_percent;
+          if (item.snapshot_timestamp) {
+            var pct = 0;
+            if (item.entry_price) {
+              pct = ((item.price - item.entry_price) / item.entry_price) * 100;
+            }
             var pctClass = pct >= 0 ? 'positive' : 'negative';
             performanceHtml =
               '<div class="tracked-coin-performance">' +
-                '<div class="price">' + formatPrice(item.entry_performance.latest_price) + '</div>' +
-                '<div class="entry-label">Entry: ' + formatPrice(item.entry_performance.entry_price) + '</div>' +
+                '<div class="price">' + formatPrice(item.price) + '</div>' +
+                '<div class="entry-label">Entry: ' + formatPrice(item.entry_price) + '</div>' +
                 '<div class="' + pctClass + ' entry-pct">' + formatPercent(pct) + '</div>' +
               '</div>';
           } else {
@@ -112,12 +120,12 @@ async function loadTrackedCoins() {
               '</div>';
           }
         } else {
-          if (item.latest_snapshot) {
+          if (item.snapshot_timestamp) {
             var c7d = item.percent_change_7d;
             var c24h = item.percent_change_24h;
             performanceHtml =
               '<div class="tracked-coin-performance">' +
-                '<div class="price">' + formatPrice(item.latest_price) + '</div>' +
+                '<div class="price">' + formatPrice(item.price) + '</div>' +
                 '<div class="' + (c7d >= 0 ? 'positive' : 'negative') + '">7d: ' + (c7d !== null ? formatPercent(c7d) : '-') + '</div>' +
                 '<div class="' + (c24h >= 0 ? 'positive' : 'negative') + '">24h: ' + (c24h !== null ? formatPercent(c24h) : '-') + '</div>' +
               '</div>';
@@ -133,7 +141,10 @@ async function loadTrackedCoins() {
             '<p>Added: ' + formatTimestamp(item.added_at) + ' • Snapshots: ' + (item.snapshot_count || 0) + '</p>' +
           '</div>' +
           performanceHtml +
-          '<button class="untrack-btn" onclick="untrackCoin(' + item.id + ', \'' + item.symbol + '\', event)">Untrack</button>' +
+          '<div class="tracked-coin-actions" onclick="event.stopPropagation()">' +
+            '<button class="untrack-btn btn-close" onclick="openCloseModal(' + item.id + ', \'' + item.name + '\', event)">Close</button>' +
+            '<button class="untrack-btn btn-untrack" onclick="untrackCoin(' + item.id + ', \'' + item.symbol + '\', event)">Untrack</button>' +
+          '</div>' +
         '</div>';
       }).join('') +
     '</div>';
@@ -658,11 +669,437 @@ function closeHistoryModal() {
   document.getElementById('historyModal').style.display = 'none';
 }
 
-window.onclick = function(event) {
-  var modal = document.getElementById('historyModal');
-  if (event.target === modal) {
-    closeHistoryModal();
+// ============================================
+// CLOSED POSITIONS
+// ============================================
+
+var currentCloseCoinId = null;
+var currentCloseFilter = 'all';
+
+function loadClosedPositions(filter) {
+  if (filter) {
+    currentCloseFilter = filter;
+  }
+
+  var container = document.getElementById('closedContainer');
+  container.innerHTML = '<div class="loading">Loading...</div>';
+
+  // Update filter buttons
+  document.querySelectorAll('.filter-btn').forEach(function(btn) {
+    btn.classList.remove('active');
+    if (btn.dataset.filter === currentCloseFilter) {
+      btn.classList.add('active');
+    }
+  });
+
+  fetchClosedPositions(currentCloseFilter);
+}
+
+function filterClosed(filter) {
+  currentCloseFilter = filter;
+  loadClosedPositions(filter);
+}
+
+async function fetchClosedPositions(filter) {
+  var container = document.getElementById('closedContainer');
+
+  try {
+    var response = await fetch('/api/closed?filter=' + filter);
+    var data = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.error);
+    }
+
+    // Update count
+    document.getElementById('closedCount').textContent = data.closed.length;
+
+    if (data.closed.length === 0) {
+      container.innerHTML = '<div class="empty-state"><div class="icon">✅</div><h3>No closed positions yet</h3><p>Close a tracked position to see it here</p></div>';
+      return;
+    }
+
+    container.innerHTML = data.closed.map(function(coin) {
+      var tagClass = '';
+      var tagLabel = coin.close_reason;
+
+      if (coin.close_reason === 'take_profit') {
+        tagClass = 'take-profit';
+        tagLabel = 'Take Profit';
+      } else if (coin.close_reason === 'cutloss') {
+        tagClass = 'cutloss';
+        tagLabel = 'Cutloss';
+      } else if (coin.close_reason === 'stagnant') {
+        tagClass = 'stagnant';
+        tagLabel = 'Stagnan/Boring';
+      } else {
+        tagClass = 'other';
+        tagLabel = coin.close_reason === 'other' ? 'Other' : coin.close_reason;
+      }
+
+      var profitClass = '';
+      var profitDisplay = '-';
+
+      if (coin.performance) {
+        profitClass = coin.performance.price_change_percent >= 0 ? 'positive' : 'negative';
+        profitDisplay = formatPercent(coin.performance.price_change_percent);
+      }
+
+      var addedDate = new Date(coin.added_at);
+      var closedDate = new Date(coin.closed_at);
+      var holdDays = coin.hold_days || Math.floor((closedDate - addedDate) / (1000 * 60 * 60 * 24));
+
+      return '<div class="closed-card" onclick="showClosedHistory(' + coin.id + ')">' +
+        '<div class="closed-card-header">' +
+        '<div class="closed-card-coin">' +
+        '<img src="' + coin.logo + '" alt="' + coin.name + '">' +
+        '<div class="closed-card-coin-info">' +
+        '<h3>' + coin.name + '</h3>' +
+        '<span>' + coin.symbol + '</span>' +
+        '</div>' +
+        '</div>' +
+        '<span class="close-tag ' + tagClass + '">' + tagLabel + '</span>' +
+        '</div>' +
+        '<div class="closed-card-stats">' +
+        '<div class="closed-stat">' +
+        '<span class="closed-stat-label">Duration</span>' +
+        '<span class="closed-stat-value">' + holdDays + ' days</span>' +
+        '</div>' +
+        '<div class="closed-stat">' +
+        '<span class="closed-stat-label">Profit/Loss</span>' +
+        '<span class="closed-stat-value ' + profitClass + '">' + profitDisplay + '</span>' +
+        '</div>' +
+        '<div class="closed-stat">' +
+        '<span class="closed-stat-label">Closed</span>' +
+        '<span class="closed-stat-value">' + formatDate(closedDate) + '</span>' +
+        '</div>' +
+        '</div>' +
+        '<div class="closed-card-actions" onclick="event.stopPropagation()">' +
+        '<button class="btn-resume" onclick="resumePosition(' + coin.id + ')">Resume</button>' +
+        '<button class="btn-delete" onclick="deleteClosedPosition(' + coin.id + ')">Delete</button>' +
+        '</div>' +
+        '</div>';
+    }).join('');
+  } catch (err) {
+    container.innerHTML = '<div class="error">Failed to load: ' + err.message + '</div>';
   }
 }
 
-fetchData();
+async function showClosedHistory(coinId) {
+  var modal = document.getElementById('historyModal');
+  var title = document.getElementById('historyTitle');
+  var body = document.getElementById('historyBody');
+
+  body.innerHTML = '<div class="loading">Loading...</div>';
+  modal.style.display = 'block';
+
+  try {
+    var response = await fetch('/api/closed/' + coinId + '/history');
+    var data = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.error);
+    }
+
+    title.textContent = data.name + ' (' + data.symbol + ') - Closed History';
+
+    // Calculate performance
+    var performanceHtml = '';
+    if (data.snapshots.length >= 2) {
+      var first = data.snapshots[0];
+      var last = data.snapshots[data.snapshots.length - 1];
+      var priceChange = last.price - first.price;
+      var priceChangePercent = (priceChange / first.price) * 100;
+      var profitClass = priceChangePercent >= 0 ? 'positive' : 'negative';
+
+      performanceHtml = '<div class="coin-info-header">' +
+        '<img src="' + data.logo + '" alt="' + data.name + '">' +
+        '<div>' +
+        '<h3>' + data.name + ' (' + data.symbol + ')</h3>' +
+        '<p>📅 ' + formatDate(new Date(data.added_at)) + ' → ' + formatDate(new Date(data.closed_at)) + '</p>' +
+        '<p>🏷️ Reason: ' + (data.close_reason === 'take_profit' ? 'Take Profit' : data.close_reason === 'cutloss' ? 'Cutloss' : data.close_reason === 'stagnant' ? 'Stagnan/Boring' : data.close_reason) + '</p>' +
+        '<p class="' + profitClass + '">💰 P/L: ' + formatPercent(priceChangePercent) + '</p>' +
+        '</div>' +
+        '</div>';
+    }
+
+    // Build snapshot table
+    var tableRows = data.snapshots.map(function(s) {
+      var c7d = s.percent_change_7d;
+      var c24h = s.percent_change_24h;
+      var scoreDisplay = s.score ? s.score.toFixed(1) : '-';
+      return '<tr><td>' + formatTimestamp(s.timestamp) + '</td><td>' + formatPrice(s.price) + '</td><td class="' + (c7d >= 0 ? 'positive' : 'negative') + '">' + (c7d !== null ? formatPercent(c7d) : '-') + '</td><td class="' + (c24h >= 0 ? 'positive' : 'negative') + '">' + (c24h !== null ? formatPercent(c24h) : '-') + '</td><td>' + formatCurrency(s.volume_24h) + '</td><td>' + scoreDisplay + '</td></tr>';
+    }).join('');
+
+    body.innerHTML = performanceHtml + '<table class="history-table"><thead><tr><th>Date</th><th>Price</th><th>7d Change</th><th>24h Change</th><th>Volume</th><th>Score</th></tr></thead><tbody>' + tableRows + '</tbody></table>';
+  } catch (err) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Failed to load history',
+      text: err.message,
+      background: '#1e293b',
+      color: '#f8fafc'
+    });
+  }
+}
+
+async function resumePosition(coinId) {
+  var result = await Swal.fire({
+    title: 'Resume tracking?',
+    text: 'This will move the coin back to active tracking',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonColor: '#3b82f6',
+    cancelButtonColor: '#6b7280',
+    confirmButtonText: 'Yes, resume',
+    background: '#1e293b',
+    color: '#f8fafc'
+  });
+
+  if (result.isConfirmed) {
+    try {
+      showLoading();
+      var response = await fetch('/api/resume', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coinId: coinId })
+      });
+      var data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error);
+      }
+
+      hideLoading();
+      await Swal.fire({
+        icon: 'success',
+        title: 'Resumed!',
+        text: 'Coin is back in active tracking',
+        background: '#1e293b',
+        color: '#f8fafc',
+        timer: 1500,
+        showConfirmButton: false
+      });
+
+      loadClosedPositions(currentCloseFilter);
+      updateTrackedCount();
+    } catch (err) {
+      hideLoading();
+      Swal.fire({
+        icon: 'error',
+        title: 'Failed to resume',
+        text: err.message,
+        background: '#1e293b',
+        color: '#f8fafc'
+      });
+    }
+  }
+}
+
+async function deleteClosedPosition(coinId) {
+  var result = await Swal.fire({
+    title: 'Delete permanently?',
+    text: 'This will remove all history for this coin. This action cannot be undone!',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#ef4444',
+    cancelButtonColor: '#6b7280',
+    confirmButtonText: 'Yes, delete',
+    background: '#1e293b',
+    color: '#f8fafc'
+  });
+
+  if (result.isConfirmed) {
+    try {
+      showLoading();
+      var response = await fetch('/api/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coinId: coinId, action: 'remove' })
+      });
+      var data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error);
+      }
+
+      hideLoading();
+      await Swal.fire({
+        icon: 'success',
+        title: 'Deleted!',
+        text: 'Closed position has been removed',
+        background: '#1e293b',
+        color: '#f8fafc',
+        timer: 1500,
+        showConfirmButton: false
+      });
+
+      loadClosedPositions(currentCloseFilter);
+    } catch (err) {
+      hideLoading();
+      Swal.fire({
+        icon: 'error',
+        title: 'Failed to delete',
+        text: err.message,
+        background: '#1e293b',
+        color: '#f8fafc'
+      });
+    }
+  }
+}
+
+// ============================================
+// CLOSE POSITION MODAL
+// ============================================
+
+function openCloseModal(coinId, coinName) {
+  currentCloseCoinId = coinId;
+
+  // Reset form
+  document.querySelectorAll('input[name="closeReason"]').forEach(function(radio) {
+    radio.checked = false;
+  });
+  document.getElementById('closeReasonOther').value = '';
+  document.getElementById('closeReasonOther').disabled = true;
+
+  var modal = document.getElementById('closeModal');
+  document.querySelector('#closeModal .modal-content h2').textContent = 'Close Position - ' + coinName;
+  modal.style.display = 'block';
+}
+
+function closeCloseModal() {
+  document.getElementById('closeModal').style.display = 'none';
+  currentCloseCoinId = null;
+}
+
+function confirmClosePosition() {
+  var selectedReason = document.querySelector('input[name="closeReason"]:checked');
+
+  if (!selectedReason) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Please select a reason',
+      text: 'Why are you closing this position?',
+      background: '#1e293b',
+      color: '#f8fafc'
+    });
+    return;
+  }
+
+  var reason = selectedReason.value;
+  if (reason === 'other') {
+    var otherText = document.getElementById('closeReasonOther').value.trim();
+    if (!otherText) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Please specify',
+        text: 'Enter a reason for closing',
+        background: '#1e293b',
+        color: '#f8fafc'
+      });
+      return;
+    }
+    reason = otherText;
+  }
+
+  closePositionWithReason(currentCloseCoinId, reason);
+}
+
+async function closePositionWithReason(coinId, reason) {
+  try {
+    showLoading();
+    var response = await fetch('/api/close', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ coinId: coinId, reason: reason })
+    });
+    var data = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.error);
+    }
+
+    hideLoading();
+    closeCloseModal();
+
+    await Swal.fire({
+      icon: 'success',
+      title: 'Position closed!',
+      text: 'Moved to Closed tab',
+      background: '#1e293b',
+      color: '#f8fafc',
+      timer: 1500,
+      showConfirmButton: false
+    });
+
+    loadTrackedCoins();
+    updateTrackedCount();
+  } catch (err) {
+    hideLoading();
+    Swal.fire({
+      icon: 'error',
+      title: 'Failed to close',
+      text: err.message,
+      background: '#1e293b',
+      color: '#f8fafc'
+    });
+  }
+}
+
+// Handle "Other" radio button
+document.addEventListener('DOMContentLoaded', function() {
+  var otherRadio = document.querySelector('input[name="closeReason"][value="other"]');
+  var otherInput = document.getElementById('closeReasonOther');
+
+  if (otherRadio && otherInput) {
+    otherRadio.addEventListener('change', function() {
+      otherInput.disabled = !this.checked;
+      if (this.checked) {
+        otherInput.focus();
+      }
+    });
+  }
+});
+
+window.onclick = function(event) {
+  var historyModal = document.getElementById('historyModal');
+  var closeModal = document.getElementById('closeModal');
+
+  if (event.target === historyModal) {
+    closeHistoryModal();
+  }
+  if (event.target === closeModal) {
+    closeCloseModal();
+  }
+}
+
+// Restore tab state from localStorage
+var savedTab = localStorage.getItem('coinscope_active_tab');
+if (savedTab && ['top5', 'tracked', 'closed'].includes(savedTab)) {
+  currentTab = savedTab;
+  // Update tab buttons
+  document.querySelectorAll('.tab-btn').forEach(function(btn) {
+    btn.classList.remove('active');
+    if (btn.dataset.tab === savedTab) {
+      btn.classList.add('active');
+    }
+  });
+  // Update tab content
+  document.querySelectorAll('.tab-content').forEach(function(content) {
+    content.classList.remove('active');
+  });
+  document.getElementById('tab-' + savedTab).classList.add('active');
+}
+
+// Initialize app
+async function initApp() {
+  await fetchData();
+  // Load data for the restored tab
+  if (currentTab === 'tracked') {
+    loadTrackedCoins();
+  } else if (currentTab === 'closed') {
+    loadClosedPositions();
+  }
+}
+
+initApp();

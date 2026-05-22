@@ -1,5 +1,92 @@
 # CoinScope - Changelog & Implementation Notes
 
+## v1.3 - Close Position Feature & UI Enhancements (22 Mei 2026)
+
+---
+
+### 1. Close Position Feature
+
+User dapat menutup posisi yang sedang di-track dengan alasan spesifik:
+
+**Close Reasons:**
+- 🎯 **Take Profit** - Target profit tercapai
+- 📉 **Cutloss** - Batas rugi terlampaui
+- 😴 **Stagnan/Boring** - Koin tidak bergerak
+- 📝 **Other** - Alasan custom
+
+**Tab "Closed":**
+- Menampilkan semua posisi yang sudah ditutup
+- Filter berdasarkan close reason
+- Resume: Kembalikan ke active tracking
+- Delete: Hapus permanen (termasuk history)
+
+---
+
+### 2. UI/UX Improvements
+
+**Tab State Persistence:**
+- Tab aktif tersimpan di localStorage
+- Setelah refresh, user tetap di tab yang sama
+
+**Mobile Responsiveness:**
+- Single column layout di mobile
+- Multi-column grid di desktop
+- Touch-friendly button sizes
+- Proper text truncation untuk long names
+
+**Button Layout:**
+- Tombol "Close" di atas tombol "Untrack"
+- Grouped dalam container dengan proper spacing
+- Prevent overlap dengan flexbox layout
+
+---
+
+### 3. Database Changes
+
+| Tabel | Kolom Baru | Deskripsi |
+|-------|-----------|-----------|
+| `tracked_coins` | `status` | 'active' atau 'closed' |
+| `tracked_coins` | `closed_at` | Timestamp penutupan |
+| `tracked_coins` | `close_reason` | Alasan penutupan |
+
+**View Update:**
+- `tracked_with_latest_snapshot` - Filter `WHERE status = 'active'`
+- Tambah kolom `snapshot_count` via subquery
+
+**Index:**
+- `idx_tracked_coins_status` - Untuk filter cepat
+- `idx_tracked_coins_closed_at` - Untuk sort by closed date
+
+---
+
+### 4. API Endpoints
+
+| Endpoint | Method | Deskripsi |
+|----------|--------|-----------|
+| `/api/close` | POST | Tutup posisi dengan reason |
+| `/api/resume` | POST | Kembalikan ke active tracking |
+| `/api/closed` | GET | Ambil semua closed positions |
+| `/api/closed/:coinId/history` | GET | History snapshot untuk closed coin |
+
+---
+
+### 5. File Changes
+
+**Backend:**
+- `src/db.js` - `getClosedPositions()`, `closePosition()`, `resumePosition()`
+- `src/tracking.js` - Export fungsi closed positions
+- `src/server.js` - Endpoints untuk close/resume/closed
+
+**Frontend:**
+- `public/index.html` - Tab "Closed", Close Position modal, filter bar
+- `public/app.js` - `loadClosedPositions()`, `filterClosed()`, `resumePosition()`, `deleteClosedPosition()`, tab state persistence
+- `public/style.css` - Closed tab styles, mobile responsiveness, button layouts
+
+**Migration:**
+- `supabase/migrations/20250522_close_position_feature.sql` - Consolidated migration
+
+---
+
 ## v1.2 - Hold Strategy Optimization (22 Mei 2026)
 
 ---

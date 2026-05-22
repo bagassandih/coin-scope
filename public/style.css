@@ -1707,3 +1707,478 @@ footer {
     opacity: 0.7;
   }
 }
+
+/* ============================================
+   CLOSED TAB STYLES
+   ============================================ */
+
+.closed-header {
+  padding: 1rem 0;
+}
+
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  padding: 0 0.75rem;
+  margin-bottom: 1rem;
+}
+
+@media (min-width: 480px) {
+  .filter-bar {
+    gap: 0.5rem;
+    padding: 0 1rem;
+  }
+}
+
+.filter-label {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-right: 0.5rem;
+}
+
+.filter-btn {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 0.4rem 0.75rem;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+@media (min-width: 480px) {
+  .filter-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+  }
+}
+
+.filter-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent-color);
+}
+
+.filter-btn.active {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: white;
+}
+
+.closed-container {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  padding: 0 0.75rem 1rem 0.75rem;
+}
+
+@media (min-width: 480px) {
+  .closed-container {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    padding: 0 1rem 1rem 1rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .closed-container {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
+}
+
+/* Center empty state in closed tab */
+.closed-container > .empty-state {
+  grid-column: 1 / -1;
+  text-align: center;
+}
+
+.closed-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 0.875rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+@media (min-width: 480px) {
+  .closed-card {
+    padding: 1rem;
+  }
+}
+
+.closed-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: var(--accent-color);
+}
+
+.closed-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  gap: 0.5rem;
+}
+
+@media (min-width: 480px) {
+  .closed-card-header {
+    margin-bottom: 0.75rem;
+  }
+}
+
+.closed-card-coin {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  flex: 1;
+}
+
+@media (min-width: 480px) {
+  .closed-card-coin {
+    gap: 0.75rem;
+  }
+}
+
+.closed-card-coin img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+}
+
+@media (min-width: 480px) {
+  .closed-card-coin img {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+.closed-card-coin-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.closed-card-coin-info h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.closed-card-coin-info span {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (min-width: 480px) {
+  .closed-card-coin-info h3 {
+    font-size: 1rem;
+  }
+
+  .closed-card-coin-info span {
+    font-size: 0.85rem;
+  }
+}
+
+.close-tag {
+  padding: 0.2rem 0.6rem;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+@media (min-width: 480px) {
+  .close-tag {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+  }
+}
+
+.close-tag.take-profit {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+
+.close-tag.cutloss {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.close-tag.stagnant {
+  background: rgba(234, 179, 8, 0.15);
+  color: #eab308;
+}
+
+.close-tag.other {
+  background: rgba(107, 114, 128, 0.15);
+  color: #6b7280;
+}
+
+.closed-card-stats {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.625rem 0;
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 0.625rem;
+  gap: 0.5rem;
+}
+
+@media (min-width: 480px) {
+  .closed-card-stats {
+    padding: 0.75rem 0;
+    margin-bottom: 0.75rem;
+  }
+}
+
+.closed-stat {
+  text-align: center;
+  min-width: 0;
+  flex: 1;
+}
+
+.closed-stat-label {
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
+.closed-stat-value {
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+@media (min-width: 480px) {
+  .closed-stat-label {
+    font-size: 0.75rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .closed-stat-value {
+    font-size: 0.9rem;
+  }
+}
+
+.closed-stat-value.positive {
+  color: #22c55e;
+}
+
+.closed-stat-value.negative {
+  color: #ef4444;
+}
+
+.closed-card-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.closed-card-actions button {
+  flex: 1;
+  padding: 0.5rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+}
+
+@media (min-width: 480px) {
+  .closed-card-actions button {
+    font-size: 0.85rem;
+  }
+}
+
+.btn-resume {
+  background: var(--accent-color);
+  color: white;
+}
+
+.btn-resume:hover {
+  background: #2563eb;
+}
+
+.btn-delete {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.btn-delete:hover {
+  background: #fee2e2;
+  color: #ef4444;
+  border-color: #ef4444;
+}
+
+/* Close Position Modal */
+.modal-small {
+  max-width: 450px;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  padding: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.modal-footer button {
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.btn-secondary:hover {
+  background: var(--bg-hover);
+}
+
+.btn-primary {
+  background: var(--accent-color);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #2563eb;
+}
+
+.close-reasons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.close-reason-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.close-reason-option:hover {
+  border-color: var(--accent-color);
+  background: var(--bg-hover);
+}
+
+.close-reason-option input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent-color);
+}
+
+.close-reason-option span {
+  flex: 1;
+}
+
+.other-input {
+  flex: 1;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  margin-left: 0.5rem;
+}
+
+.other-input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+.other-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* History Close Button */
+.history-actions {
+  margin: 1rem 0;
+  text-align: center;
+}
+
+.history-btn-close {
+  background: #f59e0b;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.history-btn-close:hover {
+  background: #d97706;
+}
+
+/* Tracked coin action buttons */
+.untrack-btn.btn-close {
+  background: #f59e0b;
+  margin-right: 0.5rem;
+}
+
+.untrack-btn.btn-close:hover {
+  background: #d97706;
+}
+
+.untrack-btn.btn-untrack {
+  background: var(--danger);
+}
+
+.untrack-btn.btn-untrack:hover {
+  background: #dc2626;
+}
+
+/* Fix tracked coin button layout */
+.tracked-coin-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+@media (min-width: 480px) {
+  .tracked-coin-item {
+    gap: 1rem;
+  }
+}
+
+.tracked-coin-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.tracked-coin-actions .untrack-btn {
+  margin: 0;
+}

@@ -8,6 +8,21 @@ export function getTrackedCoins() {
   return db.getTrackedCoins();
 }
 
+// Get closed positions
+export function getClosedPositions(filterReason = null) {
+  return db.getClosedPositions(filterReason);
+}
+
+// Close a position (move to closed)
+export function closePosition(coinId, reason) {
+  return db.closePosition(coinId, reason);
+}
+
+// Resume a closed position (move back to active)
+export function resumePosition(coinId) {
+  return db.resumePosition(coinId);
+}
+
 // Add coin to tracking
 // mode: 'cmc' (use CMC live data) or 'entry' (track profit from entry price)
 export function addTrackedCoin(coin, mode = 'cmc', entryPrice = null) {

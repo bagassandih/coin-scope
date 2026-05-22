@@ -12,6 +12,9 @@ import {
   getLatestSnapshots,
   getCoinSnapshots,
   getCoinPerformance,
+  getClosedPositions,
+  closePosition,
+  resumePosition,
 } from './tracking.js';
 import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
@@ -225,6 +228,159 @@ app.post('/api/track', async (req, res) => {
     res.json({
       success: true,
       tracked,
+    });
+  } catch (err) {
+    console.error('Error:', err.message);
+    res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+});
+
+// Close position (move to closed)
+app.post('/api/close', async (req, res) => {
+  try {
+    const { coinId, reason } = req.body;
+
+    if (!coinId) {
+      return res.status(400).json({
+        success: false,
+        error: 'coinId is required',
+      });
+    }
+
+    if (!reason) {
+      return res.status(400).json({
+        success: false,
+        error: 'reason is required (take_profit, cutloss, stagnant, other)',
+      });
+    }
+
+    await closePosition(coinId, reason);
+    const tracked = await getTrackedCoins();
+
+    res.json({
+      success: true,
+      tracked,
+    });
+  } catch (err) {
+    console.error('Error:', err.message);
+    res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+});
+
+// Resume position (move back to active)
+app.post('/api/resume', async (req, res) => {
+  try {
+    const { coinId } = req.body;
+
+    if (!coinId) {
+      return res.status(400).json({
+        success: false,
+        error: 'coinId is required',
+      });
+    }
+
+    await resumePosition(coinId);
+    const tracked = await getTrackedCoins();
+
+    res.json({
+      success: true,
+      tracked,
+    });
+  } catch (err) {
+    console.error('Error:', err.message);
+    res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+});
+
+// Get closed positions
+app.get('/api/closed', async (req, res) => {
+  try {
+    const filter = req.query.filter || 'all';
+    const closed = await getClosedPositions(filter);
+
+    // Enrich with latest snapshot data for performance calculation
+    const enriched = await Promise.all(closed.map(async (coin) => {
+      const snapshots = await getCoinSnapshots(coin.id);
+      const firstSnapshot = snapshots[0];
+      const lastSnapshot = snapshots[snapshots.length - 1];
+
+      let performance = null;
+      if (firstSnapshot && lastSnapshot) {
+        const priceChange = lastSnapshot.price - firstSnapshot.price;
+        const priceChangePercent = (priceChange / firstSnapshot.price) * 100;
+        performance = {
+          first_price: firstSnapshot.price,
+          first_timestamp: firstSnapshot.timestamp,
+          last_price: lastSnapshot.price,
+          last_timestamp: lastSnapshot.timestamp,
+          price_change: priceChange,
+          price_change_percent: priceChangePercent,
+        };
+      }
+
+      // Calculate hold duration
+      const closedDate = new Date(coin.closed_at);
+      const addedDate = new Date(coin.added_at);
+      const holdDays = Math.floor((closedDate - addedDate) / (1000 * 60 * 60 * 24));
+
+      return {
+        ...coin,
+        logo: `https://s2.coinmarketcap.com/static/img/coins/64x64/${coin.id}.png`,
+        performance,
+        hold_days: holdDays,
+      };
+    }));
+
+    res.json({
+      success: true,
+      closed: enriched,
+    });
+  } catch (err) {
+    console.error('Error:', err.message);
+    res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+});
+
+// Get closed position history (snapshots)
+app.get('/api/closed/:coinId/history', async (req, res) => {
+  try {
+    const { coinId } = req.params;
+    const id = parseInt(coinId);
+    const snapshots = await getCoinSnapshots(id);
+
+    // Get coin info from tracked_coins (even though closed)
+    const closed = await getClosedPositions();
+    const coinInfo = closed.find(c => c.id === id);
+
+    if (!coinInfo) {
+      return res.status(404).json({
+        success: false,
+        error: 'Closed position not found',
+      });
+    }
+
+    res.json({
+      success: true,
+      coinId: id,
+      name: coinInfo.name,
+      symbol: coinInfo.symbol,
+      logo: `https://s2.coinmarketcap.com/static/img/coins/64x64/${id}.png`,
+      added_at: coinInfo.added_at,
+      closed_at: coinInfo.closed_at,
+      close_reason: coinInfo.close_reason,
+      snapshots,
     });
   } catch (err) {
     console.error('Error:', err.message);
