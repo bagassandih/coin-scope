@@ -13,9 +13,39 @@ import {
   getCoinSnapshots,
   getCoinPerformance,
 } from './tracking.js';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import crypto from 'crypto';
 
+const execAsync = promisify(exec);
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Constants
+const WEBHOOK_SECRET = process.env.GITHUB_WEBHOOK_SECRET || 'change-me-in-production';
+const WEBHOOK_RESTART_DELAY = 1000;
+
+// Helper: map coin to response format
+function mapCoinResponse(coin, index, trackedIds) {
+  return {
+    rank: index + 1,
+    id: coin.id,
+    name: coin.name,
+    symbol: coin.symbol,
+    logo: coin.logo,
+    platform: coin.platform,
+    platform_name: coin.platform_name,
+    price: coin.price,
+    percent_change_7d: coin.percent_change_7d,
+    percent_change_24h: coin.percent_change_24h,
+    volume_24h: coin.volume_24h,
+    market_cap: coin.market_cap,
+    tier: coin.tier,
+    tierLabel: coin.tierLabel,
+    score: coin.weightedScore,
+    tracked: trackedIds.includes(coin.id),
+  };
+}
 
 app.use(express.json());
 app.use(express.static('public'));
@@ -63,24 +93,7 @@ app.get('/api/top5', async (req, res) => {
       cacheAge: getCacheAge(),
       universe: coins.length,
       filtered: filterResult.passed.length,
-      top5: top5.map((coin, index) => ({
-        rank: index + 1,
-        id: coin.id,
-        name: coin.name,
-        symbol: coin.symbol,
-        logo: coin.logo,
-        platform: coin.platform,
-        platform_name: coin.platform_name,
-        price: coin.price,
-        percent_change_7d: coin.percent_change_7d,
-        percent_change_24h: coin.percent_change_24h,
-        volume_24h: coin.volume_24h,
-        market_cap: coin.market_cap,
-        tier: coin.tier,
-        tierLabel: coin.tierLabel,
-        score: coin.weightedScore,
-        tracked: trackedIds.includes(coin.id),
-      })),
+      top5: top5.map((coin, index) => mapCoinResponse(coin, index, trackedIds)),
     });
   } catch (err) {
     console.error('Error:', err.message);
@@ -149,24 +162,7 @@ app.post('/api/refresh', async (req, res) => {
       cacheAge,
       universe: coins.length,
       filtered: filterResult.passed.length,
-      top5: top5.map((coin, index) => ({
-        rank: index + 1,
-        id: coin.id,
-        name: coin.name,
-        symbol: coin.symbol,
-        logo: coin.logo,
-        platform: coin.platform,
-        platform_name: coin.platform_name,
-        price: coin.price,
-        percent_change_7d: coin.percent_change_7d,
-        percent_change_24h: coin.percent_change_24h,
-        volume_24h: coin.volume_24h,
-        market_cap: coin.market_cap,
-        tier: coin.tier,
-        tierLabel: coin.tierLabel,
-        score: coin.weightedScore,
-        tracked: trackedIds.includes(coin.id),
-      })),
+      top5: top5.map((coin, index) => mapCoinResponse(coin, index, trackedIds)),
     });
   } catch (err) {
     console.error('Error:', err.message);
@@ -286,6 +282,124 @@ app.get('/api/history/:coinId', async (req, res) => {
     res.status(500).json({
       success: false,
       error: err.message,
+    });
+  }
+});
+
+// ============================================
+// WEBHOOK ENDPOINT (GitHub CI/CD)
+// ============================================
+
+// Verify GitHub webhook signature
+function verifyGitHubSignature(payload, signature) {
+  try {
+    const expectedSignature = 'sha256=' + crypto
+      .createHmac('sha256', WEBHOOK_SECRET)
+      .update(payload)
+      .digest('hex');
+
+    // Safe comparison that handles different lengths
+    if (signature.length !== expectedSignature.length) {
+      return false;
+    }
+
+    return crypto.timingSafeEqual(
+      Buffer.from(signature),
+      Buffer.from(expectedSignature)
+    );
+  } catch (err) {
+    console.error('Signature verification error:', err.message);
+    return false;
+  }
+}
+
+app.post('/webhook/github', async (req, res) => {
+  try {
+    // Verify webhook signature
+    const signature = req.headers['x-hub-signature-256'];
+    if (!signature) {
+      console.log('⚠️  Webhook: No signature provided');
+      return res.status(401).json({ error: 'No signature provided' });
+    }
+
+    const payload = JSON.stringify(req.body);
+    if (!verifyGitHubSignature(payload, signature)) {
+      console.log('⚠️  Webhook: Invalid signature');
+      return res.status(401).json({ error: 'Invalid signature' });
+    }
+
+    // Check if this is a push event
+    if (req.headers['x-github-event'] !== 'push') {
+      return res.json({ message: 'Event ignored, only push events trigger deploy' });
+    }
+
+    console.log('🔄 Webhook received! Starting deployment...');
+
+    // Get the repository path (parent of src/)
+    const repoPath = process.cwd();
+
+    // Execute git pull
+    console.log('📥 Pulling latest code...');
+    const { stdout: pullOutput } = await execAsync('git pull', { cwd: repoPath });
+    console.log(pullOutput);
+
+    // Check if package.json changed
+    const packageChanged = pullOutput.includes('package.json');
+
+    // Install dependencies if package.json changed
+    if (packageChanged) {
+      console.log('📦 Installing dependencies...');
+      const { stdout: installOutput } = await execAsync('npm install', { cwd: repoPath });
+      console.log(installOutput);
+    }
+
+    // Check if running under PM2
+    const isPM2 = process.env.PM2_HOME || process.env.NODE_ENV === 'production' || packageChanged;
+
+    if (isPM2) {
+      // Auto-restart with PM2
+      res.json({
+        success: true,
+        message: 'Code updated! Restarting with PM2...',
+        changes: pullOutput.trim(),
+        dependenciesInstalled: packageChanged,
+        restartMode: 'pm2'
+      });
+
+      setTimeout(async () => {
+        console.log('🔄 Restarting with PM2...');
+        try {
+          await execAsync('pm2 reload coinscope || pm2 restart coinscope', {
+            cwd: repoPath
+          });
+          console.log('✅ PM2 restart completed!');
+        } catch (err) {
+          console.error('❌ PM2 restart failed:', err.message);
+        }
+      }, WEBHOOK_RESTART_DELAY);
+    } else {
+      // Manual mode (development/laptop)
+      res.json({
+        success: true,
+        message: 'Code updated! To restart: pkill -f "node src/server.js" && npm start',
+        changes: pullOutput.trim(),
+        dependenciesInstalled: packageChanged,
+        restartMode: 'manual'
+      });
+
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('✅ Webhook completed! Code is now up to date.');
+      console.log('📝 To apply changes, restart manually:');
+      console.log('   pkill -f "node src/server.js" && npm start');
+      console.log('ℹ️  Running in Manual Mode (not PM2)');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    }
+
+  } catch (err) {
+    console.error('❌ Webhook error:', err.message);
+    res.status(500).json({
+      success: false,
+      error: err.message
     });
   }
 });
