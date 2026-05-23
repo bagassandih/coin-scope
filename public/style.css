@@ -2023,6 +2023,25 @@ footer {
   color: white;
 }
 
+.filter-clear {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 0.4rem 0.6rem;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  margin-left: auto;
+}
+
+.filter-clear:hover {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: white;
+  transform: scale(1.05);
+}
+
 .closed-container {
   display: grid;
   grid-template-columns: 1fr;
