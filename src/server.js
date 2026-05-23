@@ -512,26 +512,17 @@ app.post('/webhook/github', async (req, res) => {
   // Spawn detached deployment process (completely independent from HTTP connection)
   // This ensures GitHub gets immediate response without waiting
   const deployScript = `${__dirname}/../scripts/deploy.js`;
-  const { createWriteStream, mkdirSync } = await import('fs');
+  const { spawn: spawnProc } = await import('child_process');
 
-  // Ensure logs directory exists
-  const logsDir = `${__dirname}/../logs`;
-  try {
-    mkdirSync(logsDir, { recursive: true });
-  } catch {
-    // Directory might already exist, ignore
-  }
-
-  const logStream = createWriteStream(`${logsDir}/deploy.log`, { flags: 'a' });
-
-  spawn('node', [deployScript], {
+  const deployProc = spawnProc('node', [deployScript], {
     detached: true,
-    stdio: ['ignore', logStream, logStream],  // stdin=ignore, stdout=log, stderr=log
+    stdio: 'ignore',  // Detached completely, deploy script handles its own logging
     cwd: process.cwd(),
     env: { ...process.env }
-  }).unref();
+  });
+  deployProc.unref();
 
-  log('🔄 Webhook received! Deployment running in background... (check logs/deploy.log)');
+  log('🔄 Webhook received! Deployment running in background...');
 });
 
 app.listen(PORT, () => {

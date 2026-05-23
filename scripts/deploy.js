@@ -7,8 +7,38 @@
 
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { createWriteStream, mkdirSync, existsSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const execAsync = promisify(exec);
+
+// Setup logging
+const logsDir = `${__dirname}/../logs`;
+if (!existsSync(logsDir)) {
+  mkdirSync(logsDir, { recursive: true });
+}
+
+const logStream = createWriteStream(`${logsDir}/deploy.log`, { flags: 'a' });
+
+// Override console to write to file
+const originalLog = console.log;
+const originalError = console.error;
+
+console.log = (...args) => {
+  const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ');
+  originalLog(msg);
+  logStream.write(msg + '\n');
+};
+
+console.error = (...args) => {
+  const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ');
+  originalError(msg);
+  logStream.write('ERROR: ' + msg + '\n');
+};
 
 // Get WIB timestamp
 function getWIBTimestamp() {
@@ -115,8 +145,12 @@ async function deploy() {
     }
   } catch (err) {
     console.error(`[${getWIBTimestamp()}] ❌ Deployment error:`, err.message);
+    logStream.end();
     process.exit(1);
   }
+
+  // Close log stream
+  logStream.end();
 }
 
 deploy();
