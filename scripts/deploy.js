@@ -22,9 +22,12 @@ async function deploy() {
   try {
     console.log(`[${getWIBTimestamp()}] 🔄 Deploying...`);
 
-    // 1. Git pull (with rebase for cleaner history)
-    console.log(`[${getWIBTimestamp()}] 📥 git pull`);
-    const { stdout: pullOutput } = await execAsync('git pull --rebase');
+    // 1. Git pull (with fetch first to check for changes)
+    console.log(`[${getWIBTimestamp()}] 📥 git fetch origin main`);
+    await execAsync('git fetch origin main');
+
+    console.log(`[${getWIBTimestamp()}] 📥 git pull origin main`);
+    const { stdout: pullOutput } = await execAsync('git pull origin main');
 
     // 2. npm install if package.json changed
     if (pullOutput.includes('package.json')) {
