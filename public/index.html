@@ -8,8 +8,18 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <a href="#main-content" class="skip-link">Skip to content</a>
+
+  <!-- Pull-to-Refresh -->
+  <div class="pull-to-refresh" id="pullToRefresh">
+    <div class="pull-indicator">
+      <div class="pull-icon">🔄</div>
+      <div class="pull-text">Pull to refresh</div>
+    </div>
+  </div>
+
   <div class="container">
-    <header>
+    <header id="main-content">
       <div class="logo">
         <span class="coin-icon">🪙</span>
         <h1>CoinScope</h1>
@@ -32,29 +42,27 @@
 
     <!-- Tab: Top 5 -->
     <div class="tab-content active" id="tab-top5">
-      <div class="stats-bar" id="stats">
-        <div class="stat">
-          <span class="stat-label">Timestamp</span>
-          <span class="stat-value" id="timestamp">-</span>
-        </div>
-        <div class="stat">
-          <span class="stat-label">Universe</span>
-          <span class="stat-value" id="universe">-</span>
-        </div>
-        <div class="stat">
-          <span class="stat-label">Lolos Filter</span>
-          <span class="stat-value" id="filtered">-</span>
-        </div>
-        <div class="stat">
-          <span class="stat-label">Cache Age</span>
-          <span class="stat-value" id="cacheAge">-</span>
-        </div>
+      <div class="status-bar-compact" id="statsBar">
+        <span class="status-item">🕐 <span id="timestamp">-</span></span>
+        <span class="status-separator">·</span>
+        <span class="status-item"><span id="universe">-</span> koin</span>
+        <span class="status-separator">·</span>
+        <span class="status-item"><span id="filtered">-</span> lolos</span>
+        <span class="status-separator">·</span>
+        <span class="status-item status-live">Live</span>
       </div>
 
       <div class="refresh-btn-container">
         <button id="refreshBtn" onclick="refreshData()">
           <span class="icon">🔄</span> Refresh Data
         </button>
+      </div>
+
+      <div class="countdown-container" id="countdownContainer" style="display:none">
+        <div class="progress-track">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="countdown-text" id="countdownText">Refresh in <span id="countdownSeconds">30</span>s</div>
       </div>
 
       <div class="coins-container" id="coinsContainer">
@@ -157,9 +165,51 @@
     </div>
 
     <footer>
-      <p>⚠️ Bukan rekomendasi investasi. Ini scoring berbasis momentum historis.</p>
-      <p class="disclaimer">Data dari CoinMarketCap API | v1.2 Scoring: 12% 7d + 48% 30d + 25% Volume + 10% MCap Tier + 5% 24h + Healthy Bonus</p>
+      <p class="disclaimer-main">⚠️ Bukan rekomendasi investasi</p>
+      <button class="scoring-info-btn" onclick="showScoringInfo()">
+        <span>ℹ️</span> Info Scoring
+      </button>
     </footer>
+
+    <!-- Scoring Info Modal -->
+    <div id="scoringModal" class="modal">
+      <div class="modal-content modal-small">
+        <div class="modal-header">
+          <h2>ℹ️ Info Scoring</h2>
+          <span class="close" onclick="closeScoringModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+          <h3>Formula Scoring v1.2</h3>
+          <div class="scoring-breakdown">
+            <div class="scoring-item">
+              <span class="scoring-label">7 Day Change</span>
+              <span class="scoring-value">12%</span>
+            </div>
+            <div class="scoring-item">
+              <span class="scoring-label">30 Day Change</span>
+              <span class="scoring-value">48%</span>
+            </div>
+            <div class="scoring-item">
+              <span class="scoring-label">Volume (24h)</span>
+              <span class="scoring-value">25%</span>
+            </div>
+            <div class="scoring-item">
+              <span class="scoring-label">Market Cap Tier</span>
+              <span class="scoring-value">10%</span>
+            </div>
+            <div class="scoring-item">
+              <span class="scoring-label">24h Change</span>
+              <span class="scoring-value">5%</span>
+            </div>
+            <div class="scoring-item">
+              <span class="scoring-label">Healthy Bonus</span>
+              <span class="scoring-value">+0 to +5</span>
+            </div>
+          </div>
+          <p class="scoring-note">Data dari CoinMarketCap API</p>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Loading Overlay -->

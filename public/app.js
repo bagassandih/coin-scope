@@ -86,7 +86,10 @@ async function loadTrackedCoins() {
         '<div class="empty-state">' +
           '<div class="icon">📊</div>' +
           '<h3>Belum ada koin di-track</h3>' +
-          '<p>Centang koin di tab Top 5 lalu pilih mode tracking</p>' +
+          '<p>Centang koin di tab Top 5 untuk mulai tracking</p>' +
+          '<button class="empty-state-cta" onclick="switchTab(\'top5\')">' +
+            '<span>🏆</span> Lihat Top 5' +
+          '</button>' +
         '</div>';
       return;
     }
@@ -105,12 +108,17 @@ async function loadTrackedCoins() {
             if (item.entry_price) {
               pct = ((item.price - item.entry_price) / item.entry_price) * 100;
             }
-            var pctClass = pct >= 0 ? 'positive' : 'negative';
+            var pnlClass = pct >= 0 ? 'pnl-positive' : 'pnl-negative';
             performanceHtml =
               '<div class="tracked-coin-performance">' +
-                '<div class="price">' + formatPrice(item.price) + '</div>' +
-                '<div class="entry-label">Entry: ' + formatPrice(item.entry_price) + '</div>' +
-                '<div class="' + pctClass + ' entry-pct">' + formatPercent(pct) + '</div>' +
+                '<div class="pnl-badge ' + pnlClass + '">' +
+                  '<span class="pnl-value">' + formatPercent(pct) + '</span>' +
+                  '<span class="pnl-label">PnL</span>' +
+                '</div>' +
+                '<div style="display:flex;flex-direction:column;align-items:flex-end;margin-left:8px">' +
+                  '<span class="current-price-large">' + formatPrice(item.price) + '</span>' +
+                  '<span class="entry-price-small">Entry: ' + formatPrice(item.entry_price) + '</span>' +
+                '</div>' +
               '</div>';
           } else {
             performanceHtml =
@@ -210,17 +218,31 @@ async function refreshTrackedCoins() {
 
 function startRefreshCooldown(btn) {
   var remaining = refreshCooldown;
+  var countdownContainer = document.getElementById('countdownContainer');
+  var progressFill = document.getElementById('progressFill');
+  var countdownSeconds = document.getElementById('countdownSeconds');
+
   btn.disabled = true;
-  btn.dataset.originalHtml = btn.innerHTML;
+  countdownContainer.style.display = 'block';
+
+  var updateProgress = function() {
+    var pct = (remaining / refreshCooldown) * 100;
+    progressFill.style.width = pct + '%';
+    countdownSeconds.textContent = remaining;
+  };
+
+  updateProgress();
 
   refreshCountdownInterval = setInterval(function() {
     remaining--;
-    btn.innerHTML = '<span class="icon">⏳</span> Tunggu ' + remaining + 's';
+    updateProgress();
+
     if (remaining <= 0) {
       clearInterval(refreshCountdownInterval);
       refreshCountdownInterval = null;
       btn.disabled = false;
-      btn.innerHTML = btn.dataset.originalHtml;
+      countdownContainer.style.display = 'none';
+      btn.innerHTML = '<span class="icon">🔄</span> Refresh Data';
     }
   }, 1000);
 }
@@ -259,6 +281,10 @@ function formatTimestamp(ts) {
   return wibTime.toISOString().replace('T', ' ').slice(0, 19) + ' WIB';
 }
 
+function formatDate(date) {
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 function formatCacheAge(seconds) {
   if (!seconds) return 'Now';
   var mins = Math.floor(seconds / 60);
@@ -281,7 +307,15 @@ function renderCoins(data) {
   }
 
   if (!data.top5 || data.top5.length === 0) {
-    container.innerHTML = '<div class="empty-state"><div class="icon">📊</div><h3>Tidak ada koin yang memenuhi kriteria</h3><p>Coba refresh data atau ubah filter</p></div>';
+    container.innerHTML =
+      '<div class="empty-state">' +
+        '<div class="icon">📊</div>' +
+        '<h3>Tidak ada koin yang memenuhi kriteria</h3>' +
+        '<p>Coba refresh data atau ubah filter scoring</p>' +
+        '<button class="empty-state-cta" onclick="refreshData()">' +
+          '<span>🔄</span> Refresh Data' +
+        '</button>' +
+      '</div>';
     return;
   }
 
@@ -291,6 +325,12 @@ function renderCoins(data) {
       ? '<span class="network-badge">' + coin.platform + '</span>'
       : '<span class="network-badge native">Native</span>';
 
+    // Score color class
+    var scoreClass = coin.score >= 70 ? 'score-high' : coin.score >= 40 ? 'score-mid' : 'score-low';
+
+    // Rank class
+    var rankClass = coin.rank <= 3 ? 'rank-' + coin.rank : 'rank-default';
+
     return '<div class="coin-card">' +
       '<label class="track-checkbox-wrapper">' +
         '<input type="checkbox" class="track-checkbox" data-id="' + coin.id + '" data-name="' + coin.name + '" data-symbol="' + coin.symbol + '"' + (coin.tracked ? ' checked' : '') + '>' +
@@ -298,7 +338,7 @@ function renderCoins(data) {
       '</label>' +
       '<div class="coin-card-inner">' +
         '<div class="coin-card-header">' +
-          '<div class="coin-card-rank">#' + coin.rank + '</div>' +
+          '<div class="coin-card-rank ' + rankClass + '">#' + coin.rank + '</div>' +
           '<img src="' + coin.logo + '" alt="' + coin.name + '" class="coin-logo" onerror="this.src=\'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E🪙%3C/text%3E%3C/svg%3E\'">' +
           '<div class="coin-header-info">' +
             '<div class="coin-name-row">' +
@@ -311,7 +351,7 @@ function renderCoins(data) {
         '</div>' +
         '<div class="coin-card-price">' +
           '<span class="coin-price">' + formatPrice(coin.price) + '</span>' +
-          '<div class="coin-card-score">' +
+          '<div class="coin-card-score ' + scoreClass + '">' +
             '<div class="score-value">' + coin.score.toFixed(1) + '</div>' +
             '<div class="score-label">Score</div>' +
           '</div>' +
@@ -434,9 +474,8 @@ function renderCoins(data) {
 
 function updateStats(data) {
   document.getElementById('timestamp').textContent = formatTimestamp(data.timestamp);
-  document.getElementById('universe').textContent = data.universe + ' koin';
-  document.getElementById('filtered').textContent = data.filtered + ' koin';
-  document.getElementById('cacheAge').textContent = formatCacheAge(data.cacheAge);
+  document.getElementById('universe').textContent = data.universe;
+  document.getElementById('filtered').textContent = data.filtered;
 }
 
 async function fetchData() {
@@ -702,6 +741,7 @@ function filterClosed(filter) {
 
 async function fetchClosedPositions(filter) {
   var container = document.getElementById('closedContainer');
+  var filterBar = document.getElementById('filterBar');
 
   try {
     var response = await fetch('/api/closed?filter=' + filter);
@@ -714,10 +754,32 @@ async function fetchClosedPositions(filter) {
     // Update count
     document.getElementById('closedCount').textContent = data.closed.length;
 
+    // CONDITIONAL: Hide filter bar if no data
     if (data.closed.length === 0) {
-      container.innerHTML = '<div class="empty-state"><div class="icon">✅</div><h3>No closed positions yet</h3><p>Close a tracked position to see it here</p></div>';
+      filterBar.style.display = 'none';
+
+      container.innerHTML =
+        '<div class="empty-state">' +
+          '<div class="icon">✅</div>' +
+          '<h3>Belum ada posisi ditutup</h3>' +
+          '<p>Track koin dulu, baru bisa close posisi di sini.</p>' +
+          '<button class="empty-state-cta" onclick="switchTab(\'tracked\')">' +
+            'Lihat Koin Tracked' +
+          '</button>' +
+        '</div>';
       return;
     }
+
+    // Show filter bar if we have data
+    filterBar.style.display = 'flex';
+
+    // Update filter active states
+    document.querySelectorAll('.filter-btn').forEach(function(btn) {
+      btn.classList.remove('active');
+      if (btn.dataset.filter === currentCloseFilter) {
+        btn.classList.add('active');
+      }
+    });
 
     container.innerHTML = data.closed.map(function(coin) {
       var tagClass = '';
@@ -1064,6 +1126,7 @@ document.addEventListener('DOMContentLoaded', function() {
 window.onclick = function(event) {
   var historyModal = document.getElementById('historyModal');
   var closeModal = document.getElementById('closeModal');
+  var scoringModal = document.getElementById('scoringModal');
 
   if (event.target === historyModal) {
     closeHistoryModal();
@@ -1071,7 +1134,10 @@ window.onclick = function(event) {
   if (event.target === closeModal) {
     closeCloseModal();
   }
-}
+  if (event.target === scoringModal) {
+    closeScoringModal();
+  }
+};
 
 // Restore tab state from localStorage
 var savedTab = localStorage.getItem('coinscope_active_tab');
@@ -1103,3 +1169,96 @@ async function initApp() {
 }
 
 initApp();
+
+// ============================================
+// PHASE 3: POLISH - SCORING INFO MODAL
+// ============================================
+
+function showScoringInfo() {
+  var modal = document.getElementById('scoringModal');
+  modal.style.display = 'block';
+}
+
+function closeScoringModal() {
+  document.getElementById('scoringModal').style.display = 'none';
+}
+
+// ============================================
+// PHASE 3: PULL-TO-REFRESH
+// ============================================
+
+var pullToRefresh = document.getElementById('pullToRefresh');
+var pullIndicator = pullToRefresh?.querySelector('.pull-indicator');
+var pullText = pullToRefresh?.querySelector('.pull-text');
+var startY = 0;
+var currentY = 0;
+var isPulling = false;
+var pullThreshold = 80; // px
+var refreshThreshold = 120; // px
+
+function handleTouchStart(e) {
+  if (window.scrollY === 0) {
+    startY = e.touches[0].clientY;
+    isPulling = true;
+  }
+}
+
+function handleTouchMove(e) {
+  if (!isPulling) return;
+
+  currentY = e.touches[0].clientY;
+  var diff = currentY - startY;
+
+  if (diff > 0 && window.scrollY === 0) {
+    // Prevent default pull-to-refresh
+    e.preventDefault();
+
+    var progress = Math.min(diff / refreshThreshold, 1);
+
+    if (diff > pullThreshold) {
+      pullToRefresh.classList.add('visible');
+      pullText.textContent = 'Release to refresh';
+
+      if (diff >= refreshThreshold) {
+        pullToRefresh.classList.add('ready');
+        pullText.textContent = 'Release to refresh';
+      } else {
+        pullToRefresh.classList.remove('ready');
+      }
+    } else {
+      pullToRefresh.classList.remove('visible', 'ready');
+    }
+  }
+}
+
+function handleTouchEnd(e) {
+  if (!isPulling) return;
+
+  var diff = currentY - startY;
+
+  if (diff >= refreshThreshold) {
+    // Trigger refresh
+    pullToRefresh.classList.add('refreshing');
+    pullText.textContent = 'Refreshing...';
+
+    refreshData().finally(function() {
+      setTimeout(function() {
+        pullToRefresh.classList.remove('visible', 'ready', 'refreshing');
+      }, 500);
+    });
+  } else {
+    // Cancel
+    pullToRefresh.classList.remove('visible', 'ready');
+  }
+
+  isPulling = false;
+  startY = 0;
+  currentY = 0;
+}
+
+// Add event listeners for pull-to-refresh
+if (pullToRefresh) {
+  document.addEventListener('touchstart', handleTouchStart, { passive: false });
+  document.addEventListener('touchmove', handleTouchMove, { passive: false });
+  document.addEventListener('touchend', handleTouchEnd);
+}
