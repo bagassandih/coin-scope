@@ -73,10 +73,11 @@ async function deploy() {
       console.log(`[${getWIBTimestamp()}] ✅ Dependencies installed`);
     }
 
-    // Check if PM2 is available
+    // Check if PM2 is available (Windows vs Unix)
     let usePM2 = false;
     try {
-      await execAsync('which pm2');
+      const pm2CheckCmd = process.platform === 'win32' ? 'where pm2' : 'which pm2';
+      await execAsync(pm2CheckCmd);
       usePM2 = true;
       console.log(`[${getWIBTimestamp()}] 🔧 PM2 detected, using process manager`);
     } catch {
