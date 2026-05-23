@@ -735,8 +735,13 @@ function loadClosedPositions(filter) {
 }
 
 function filterClosed(filter) {
-  currentCloseFilter = filter;
-  loadClosedPositions(filter);
+  // Toggle behavior: if clicking the same active filter, reset to 'all'
+  if (currentCloseFilter === filter && filter !== 'all') {
+    currentCloseFilter = 'all';
+  } else {
+    currentCloseFilter = filter;
+  }
+  loadClosedPositions(currentCloseFilter);
 }
 
 async function fetchClosedPositions(filter) {
@@ -754,42 +759,7 @@ async function fetchClosedPositions(filter) {
     // Update count
     document.getElementById('closedCount').textContent = data.closed.length;
 
-    // CONDITIONAL: If filter returns 0 results and not "all", redirect to tracked tab
-    if (data.closed.length === 0) {
-      if (filter !== 'all') {
-        // Auto-redirect to tracked tab with a message
-        switchTab('tracked');
-        // Show toast notification (using Swal if available, or console log)
-        if (typeof Swal !== 'undefined') {
-          Swal.fire({
-            icon: 'info',
-            title: 'Tidak ada data',
-            text: `Tidak ada posisi dengan kategori "${filter}". Mengalihkan ke tab Tracked...`,
-            timer: 2000,
-            showConfirmButton: false,
-            background: '#1e293b',
-            color: '#f8fafc'
-          });
-        }
-        return;
-      }
-
-      // For "all" filter with no data, show empty state with CTA
-      filterBar.style.display = 'none';
-
-      container.innerHTML =
-        '<div class="empty-state">' +
-          '<div class="icon">✅</div>' +
-          '<h3>Belum ada posisi ditutup</h3>' +
-          '<p>Track koin dulu, baru bisa close posisi di sini.</p>' +
-          '<button class="empty-state-cta" onclick="switchTab(\'tracked\')">' +
-            'Lihat Koin Tracked' +
-          '</button>' +
-        '</div>';
-      return;
-    }
-
-    // Show filter bar if we have data
+    // Always show filter bar
     filterBar.style.display = 'flex';
 
     // Update filter active states
@@ -799,6 +769,36 @@ async function fetchClosedPositions(filter) {
         btn.classList.add('active');
       }
     });
+
+    // Handle empty results
+    if (data.closed.length === 0) {
+      var emptyTitle, emptyMessage, emptyAction;
+
+      if (filter === 'all') {
+        emptyTitle = 'Belum ada posisi ditutup';
+        emptyMessage = 'Track koin dulu, baru bisa close posisi di sini.';
+        emptyAction = '<button class="empty-state-cta" onclick="switchTab(\'tracked\')">Lihat Koin Tracked</button>';
+      } else {
+        var filterLabels = {
+          'take_profit': 'Take Profit',
+          'cutloss': 'Cutloss',
+          'stagnant': 'Stagnan/Boring',
+          'other': 'Other'
+        };
+        emptyTitle = 'Tidak ada posisi ' + filterLabels[filter];
+        emptyMessage = 'Coba filter lain atau clear filter untuk melihat semua posisi.';
+        emptyAction = '<button class="empty-state-cta" onclick="filterClosed(\'all\')">Clear Filter</button>';
+      }
+
+      container.innerHTML =
+        '<div class="empty-state">' +
+          '<div class="icon">' + (filter === 'all' ? '✅' : '📭') + '</div>' +
+          '<h3>' + emptyTitle + '</h3>' +
+          '<p>' + emptyMessage + '</p>' +
+          emptyAction +
+        '</div>';
+      return;
+    }
 
     container.innerHTML = data.closed.map(function(coin) {
       var tagClass = '';
