@@ -754,8 +754,27 @@ async function fetchClosedPositions(filter) {
     // Update count
     document.getElementById('closedCount').textContent = data.closed.length;
 
-    // CONDITIONAL: Hide filter bar if no data
+    // CONDITIONAL: If filter returns 0 results and not "all", redirect to tracked tab
     if (data.closed.length === 0) {
+      if (filter !== 'all') {
+        // Auto-redirect to tracked tab with a message
+        switchTab('tracked');
+        // Show toast notification (using Swal if available, or console log)
+        if (typeof Swal !== 'undefined') {
+          Swal.fire({
+            icon: 'info',
+            title: 'Tidak ada data',
+            text: `Tidak ada posisi dengan kategori "${filter}". Mengalihkan ke tab Tracked...`,
+            timer: 2000,
+            showConfirmButton: false,
+            background: '#1e293b',
+            color: '#f8fafc'
+          });
+        }
+        return;
+      }
+
+      // For "all" filter with no data, show empty state with CTA
       filterBar.style.display = 'none';
 
       container.innerHTML =
