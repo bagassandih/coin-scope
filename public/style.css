@@ -2062,28 +2062,20 @@ footer {
 }
 
 .closed-container {
-  display: grid;
-  grid-template-columns: 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 1rem;
   padding: 0 0.75rem 1rem 0.75rem;
 }
 
 @media (min-width: 480px) {
   .closed-container {
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     padding: 0 1rem 1rem 1rem;
-  }
-}
-
-@media (min-width: 768px) {
-  .closed-container {
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   }
 }
 
 /* Center empty state in closed tab */
 .closed-container > .empty-state {
-  grid-column: 1 / -1;
   text-align: center;
 }
 
@@ -2094,182 +2086,108 @@ footer {
   padding: 3rem 2rem;
 }
 
-.closed-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
+/* Closed Positions - Horizontal Row Style (matching tracked) */
+.closed-coins-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.closed-coin-item {
+  background: var(--bg-secondary);
   padding: 0.875rem;
-  transition: all 0.2s ease;
-  cursor: pointer;
-  overflow: hidden;
-}
-
-@media (min-width: 480px) {
-  .closed-card {
-    padding: 1rem;
-  }
-}
-
-.closed-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border-color: var(--accent-color);
-}
-
-.closed-card-header {
+  border-radius: var(--radius-md);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.75rem;
-  gap: 0.5rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  gap: 0.75rem;
 }
 
-@media (min-width: 480px) {
-  .closed-card-header {
-    margin-bottom: 0.75rem;
-  }
+.closed-coin-item:hover {
+  background: #334155;
 }
 
-.closed-card-coin {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-width: 0;
-  flex: 1;
-}
-
-@media (min-width: 480px) {
-  .closed-card-coin {
-    gap: 0.75rem;
-  }
-}
-
-.closed-card-coin img {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-}
-
-@media (min-width: 480px) {
-  .closed-card-coin img {
-    width: 36px;
-    height: 36px;
-  }
-}
-
-.closed-card-coin-info {
-  min-width: 0;
-  flex: 1;
-}
-
-.closed-card-coin-info h3 {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.closed-card-coin-info span {
-  color: var(--text-secondary);
-  font-size: 0.8rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-@media (min-width: 480px) {
-  .closed-card-coin-info h3 {
-    font-size: 1rem;
-  }
-
-  .closed-card-coin-info span {
-    font-size: 0.85rem;
-  }
-}
-
-.close-tag {
-  padding: 0.2rem 0.6rem;
+.closed-coin-logo {
+  width: 40px;
+  height: 40px;
   border-radius: 10px;
-  font-size: 0.7rem;
-  font-weight: 600;
-  text-transform: uppercase;
+  object-fit: contain;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px;
   flex-shrink: 0;
 }
 
-@media (min-width: 480px) {
-  .close-tag {
-    padding: 0.25rem 0.75rem;
-    border-radius: 12px;
-    font-size: 0.75rem;
-  }
+.closed-coin-info {
+  flex: 1;
+  min-width: 0;
 }
 
-.close-tag.take-profit {
+.closed-coin-info h3 {
+  margin: 0 0 0.25rem 0;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.closed-coin-info p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+
+.close-tag-inline {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  font-size: var(--text-badge);
+  font-weight: var(--fw-semibold);
+}
+
+.close-tag-inline.take-profit {
   background: rgba(34, 197, 94, 0.15);
   color: #22c55e;
 }
 
-.close-tag.cutloss {
+.close-tag-inline.cutloss {
   background: rgba(239, 68, 68, 0.15);
   color: #ef4444;
 }
 
-.close-tag.stagnant {
+.close-tag-inline.stagnant {
   background: rgba(234, 179, 8, 0.15);
   color: #eab308;
 }
 
-.close-tag.other {
+.close-tag-inline.other {
   background: rgba(107, 114, 128, 0.15);
   color: #6b7280;
 }
 
-.closed-card-stats {
+.closed-coin-performance {
   display: flex;
-  justify-content: space-between;
-  padding: 0.625rem 0;
-  border-top: 1px solid var(--border-color);
-  border-bottom: 1px solid var(--border-color);
-  margin-bottom: 0.625rem;
-  gap: 0.5rem;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
 }
 
-@media (min-width: 480px) {
-  .closed-card-stats {
-    padding: 0.75rem 0;
-    margin-bottom: 0.75rem;
-  }
-}
-
-.closed-stat {
-  text-align: center;
-  min-width: 0;
-  flex: 1;
+.closed-stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
 }
 
 .closed-stat-label {
   color: var(--text-secondary);
   font-size: 0.7rem;
-  display: block;
-  margin-bottom: 0.2rem;
 }
 
 .closed-stat-value {
   font-weight: 600;
   font-size: 0.85rem;
-}
-
-@media (min-width: 480px) {
-  .closed-stat-label {
-    font-size: 0.75rem;
-    margin-bottom: 0.25rem;
-  }
-
-  .closed-stat-value {
-    font-size: 0.9rem;
-  }
 }
 
 .closed-stat-value.positive {
@@ -2280,46 +2198,72 @@ footer {
   color: #ef4444;
 }
 
-.closed-card-actions {
+.closed-coin-actions {
   display: flex;
   gap: 0.5rem;
 }
 
-.closed-card-actions button {
-  flex: 1;
-  padding: 0.5rem;
+.closed-action-btn {
+  padding: 0.4rem 0.75rem;
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   transition: all 0.2s ease;
 }
 
-@media (min-width: 480px) {
-  .closed-card-actions button {
-    font-size: 0.85rem;
-  }
-}
-
-.btn-resume {
+.closed-action-btn.btn-resume {
   background: var(--accent-color);
   color: white;
 }
 
-.btn-resume:hover {
+.closed-action-btn.btn-resume:hover {
   background: #2563eb;
 }
 
-.btn-delete {
+.closed-action-btn.btn-delete {
   background: var(--bg-secondary);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
 }
 
-.btn-delete:hover {
+.closed-action-btn.btn-delete:hover {
   background: #fee2e2;
   color: #ef4444;
   border-color: #ef4444;
+}
+
+@media (min-width: 480px) {
+  .closed-coin-item {
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .closed-coin-logo {
+    width: 44px;
+    height: 44px;
+  }
+
+  .closed-coin-info h3 {
+    font-size: 1rem;
+  }
+
+  .closed-coin-info p {
+    font-size: 0.8rem;
+  }
+
+  .closed-stat-label {
+    font-size: 0.75rem;
+  }
+
+  .closed-stat-value {
+    font-size: 0.9rem;
+  }
+
+  .closed-action-btn {
+    font-size: 0.8rem;
+    padding: 0.5rem 0.875rem;
+  }
 }
 
 /* Close Position Modal */
@@ -2638,7 +2582,7 @@ footer {
 }
 
 /* Animations & Transitions Polish */
-a, button, .coin-card, .tracked-coin-item {
+a, button, .coin-card, .tracked-coin-item, .closed-coin-item {
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -2651,6 +2595,11 @@ a, button, .coin-card, .tracked-coin-item {
 /* Touch feedback */
 @media (hover: none) and (pointer: coarse) {
   .coin-card:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+  }
+
+  .closed-coin-item:active {
     transform: scale(0.98);
     transition: transform 0.1s ease;
   }
@@ -2687,6 +2636,17 @@ a, button, .coin-card, .tracked-coin-item {
 .tracked-container .tracked-coin-item:nth-child(3) { animation-delay: 0.15s; }
 .tracked-container .tracked-coin-item:nth-child(4) { animation-delay: 0.2s; }
 .tracked-container .tracked-coin-item:nth-child(5) { animation-delay: 0.25s; }
+
+/* Staggered card animations for closed container */
+.closed-coins-list .closed-coin-item {
+  animation: fadeInSlide 0.3s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.closed-coins-list .closed-coin-item:nth-child(1) { animation-delay: 0.05s; }
+.closed-coins-list .closed-coin-item:nth-child(2) { animation-delay: 0.1s; }
+.closed-coins-list .closed-coin-item:nth-child(3) { animation-delay: 0.15s; }
+.closed-coins-list .closed-coin-item:nth-child(4) { animation-delay: 0.2s; }
+.closed-coins-list .closed-coin-item:nth-child(5) { animation-delay: 0.25s; }
 
 /* Reduce motion for accessibility */
 @media (prefers-reduced-motion: reduce) {

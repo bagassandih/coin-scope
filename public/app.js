@@ -285,6 +285,12 @@ function formatDate(date) {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+function formatDateCompact(dateStr) {
+  var date = new Date(dateStr);
+  var months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+  return date.getDate() + ' ' + months[date.getMonth()];
+}
+
 function formatCacheAge(seconds) {
   if (!seconds) return 'Now';
   var mins = Math.floor(seconds / 60);
@@ -800,67 +806,67 @@ async function fetchClosedPositions(filter) {
       return;
     }
 
-    container.innerHTML = data.closed.map(function(coin) {
-      var tagClass = '';
-      var tagLabel = coin.close_reason;
+    container.innerHTML = '<div class="closed-coins-list">' +
+      data.closed.map(function(coin) {
+        var tagClass = '';
+        var tagLabel = coin.close_reason;
 
-      if (coin.close_reason === 'take_profit') {
-        tagClass = 'take-profit';
-        tagLabel = 'Take Profit';
-      } else if (coin.close_reason === 'cutloss') {
-        tagClass = 'cutloss';
-        tagLabel = 'Cutloss';
-      } else if (coin.close_reason === 'stagnant') {
-        tagClass = 'stagnant';
-        tagLabel = 'Stagnan/Boring';
-      } else {
-        tagClass = 'other';
-        tagLabel = coin.close_reason === 'other' ? 'Other' : coin.close_reason;
-      }
+        if (coin.close_reason === 'take_profit') {
+          tagClass = 'take-profit';
+          tagLabel = 'Take Profit';
+        } else if (coin.close_reason === 'cutloss') {
+          tagClass = 'cutloss';
+          tagLabel = 'Cutloss';
+        } else if (coin.close_reason === 'stagnant') {
+          tagClass = 'stagnant';
+          tagLabel = 'Stagnan/Boring';
+        } else {
+          tagClass = 'other';
+          tagLabel = coin.close_reason === 'other' ? 'Other' : coin.close_reason;
+        }
 
-      var profitClass = '';
-      var profitDisplay = '-';
+        var profitClass = '';
+        var profitDisplay = '-';
 
-      if (coin.performance) {
-        profitClass = coin.performance.price_change_percent >= 0 ? 'positive' : 'negative';
-        profitDisplay = formatPercent(coin.performance.price_change_percent);
-      }
+        if (coin.performance) {
+          profitClass = coin.performance.price_change_percent >= 0 ? 'positive' : 'negative';
+          profitDisplay = formatPercent(coin.performance.price_change_percent);
+        }
 
-      var addedDate = new Date(coin.added_at);
-      var closedDate = new Date(coin.closed_at);
-      var holdDays = coin.hold_days || Math.floor((closedDate - addedDate) / (1000 * 60 * 60 * 24));
+        var addedDate = new Date(coin.added_at);
+        var closedDate = new Date(coin.closed_at);
+        var holdDays = coin.hold_days || Math.floor((closedDate - addedDate) / (1000 * 60 * 60 * 24));
 
-      return '<div class="closed-card" onclick="showClosedHistory(' + coin.id + ')">' +
-        '<div class="closed-card-header">' +
-        '<div class="closed-card-coin">' +
-        '<img src="' + coin.logo + '" alt="' + coin.name + '">' +
-        '<div class="closed-card-coin-info">' +
-        '<h3>' + coin.name + '</h3>' +
-        '<span>' + coin.symbol + '</span>' +
-        '</div>' +
-        '</div>' +
-        '<span class="close-tag ' + tagClass + '">' + tagLabel + '</span>' +
-        '</div>' +
-        '<div class="closed-card-stats">' +
-        '<div class="closed-stat">' +
-        '<span class="closed-stat-label">Duration</span>' +
-        '<span class="closed-stat-value">' + holdDays + ' days</span>' +
-        '</div>' +
-        '<div class="closed-stat">' +
-        '<span class="closed-stat-label">Profit/Loss</span>' +
-        '<span class="closed-stat-value ' + profitClass + '">' + profitDisplay + '</span>' +
-        '</div>' +
-        '<div class="closed-stat">' +
-        '<span class="closed-stat-label">Closed</span>' +
-        '<span class="closed-stat-value">' + formatDate(closedDate) + '</span>' +
-        '</div>' +
-        '</div>' +
-        '<div class="closed-card-actions" onclick="event.stopPropagation()">' +
-        '<button class="btn-resume" onclick="resumePosition(' + coin.id + ')">Resume</button>' +
-        '<button class="btn-delete" onclick="deleteClosedPosition(' + coin.id + ')">Delete</button>' +
-        '</div>' +
+        var performanceHtml =
+          '<div class="closed-coin-performance">' +
+            '<div class="closed-stat-item">' +
+              '<span class="closed-stat-label">Duration</span>' +
+              '<span class="closed-stat-value">' + holdDays + 'd</span>' +
+            '</div>' +
+            '<div class="closed-stat-item">' +
+              '<span class="closed-stat-label">P/L</span>' +
+              '<span class="closed-stat-value ' + profitClass + '">' + profitDisplay + '</span>' +
+            '</div>' +
+            '<div class="closed-stat-item">' +
+              '<span class="closed-stat-label">Closed</span>' +
+              '<span class="closed-stat-value">' + formatDateCompact(closedDate) + '</span>' +
+            '</div>' +
+          '</div>';
+
+        return '<div class="closed-coin-item" onclick="showClosedHistory(' + coin.id + ')">' +
+          '<img src="' + coin.logo + '" alt="' + coin.symbol + '" class="closed-coin-logo" onerror="this.src=\'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E🪙%3C/text%3E%3C/svg%3E\'">' +
+          '<div class="closed-coin-info">' +
+            '<h3>' + coin.name + ' <span class="close-tag-inline ' + tagClass + '">' + tagLabel + '</span></h3>' +
+            '<p>' + coin.symbol + ' • Closed: ' + formatDateCompact(closedDate) + '</p>' +
+          '</div>' +
+          performanceHtml +
+          '<div class="closed-coin-actions" onclick="event.stopPropagation()">' +
+            '<button class="closed-action-btn btn-resume" onclick="resumePosition(' + coin.id + ')">Resume</button>' +
+            '<button class="closed-action-btn btn-delete" onclick="deleteClosedPosition(' + coin.id + ')">Delete</button>' +
+          '</div>' +
         '</div>';
-    }).join('');
+      }).join('') +
+    '</div>';
   } catch (err) {
     container.innerHTML = '<div class="error">Failed to load: ' + err.message + '</div>';
   }
