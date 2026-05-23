@@ -523,7 +523,69 @@ app.post('/webhook/github', async (req, res) => {
   deployProc.unref();
 
   log('🔄 Webhook received! Deployment running in background...');
+
+  // Reset lastStatus for new deployment
+  lastStatus = null;
+
+  // Watch deployment status and log to main console
+  watchDeploymentStatus();
 });
+
+// Watch deployment status file
+let lastStatus = null;
+let watchInterval = null;
+
+async function watchDeploymentStatus() {
+  // Clear any existing interval
+  if (watchInterval) clearInterval(watchInterval);
+
+  // Check immediately
+  await checkDeployStatus();
+
+  // Then check every 2 seconds for 30 seconds
+  let checks = 0;
+  watchInterval = setInterval(async () => {
+    checks++;
+    await checkDeployStatus();
+
+    // Stop watching after 15 checks (30 seconds)
+    if (checks >= 15) {
+      clearInterval(watchInterval);
+      watchInterval = null;
+    }
+  }, 2000);
+}
+
+async function checkDeployStatus() {
+  try {
+    const { readFile } = await import('fs/promises');
+    const statusPath = `${__dirname}/../logs/deploy-status.json`;
+
+    try {
+      const data = await readFile(statusPath, 'utf-8');
+      const status = JSON.parse(data);
+
+      // Log only if status changed
+      if (status.status !== lastStatus) {
+        lastStatus = status.status;
+
+        if (status.status === 'pulled') {
+          log(`📦 Deployment: ${status.message}`);
+        } else if (status.status === 'completed') {
+          log(`✅ Deployment: ${status.message}`);
+        } else if (status.status === 'running') {
+          // Skip initial running status to avoid duplicate
+        } else {
+          log(`🔄 Deployment: ${status.message}`);
+        }
+      }
+    } catch {
+      // Status file doesn't exist yet, ignore
+    }
+  } catch (err) {
+    // Ignore errors
+  }
+}
 
 app.listen(PORT, () => {
   log(`🌐 CoinScope UI running at http://localhost:${PORT}`);

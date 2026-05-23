@@ -24,6 +24,21 @@ if (!existsSync(logsDir)) {
 
 const logStream = createWriteStream(`${logsDir}/deploy.log`, { flags: 'a' });
 
+// Status file for main server to read
+const statusFile = `${logsDir}/deploy-status.json`;
+
+function writeStatus(status, message) {
+  const statusData = {
+    timestamp: new Date().toISOString(),
+    status,
+    message
+  };
+  createWriteStream(statusFile, { flags: 'w' }).write(JSON.stringify(statusData, null, 2));
+}
+
+// Write initial status
+writeStatus('running', 'Deployment started...');
+
 // Override console to write to file
 const originalLog = console.log;
 const originalError = console.error;
@@ -61,6 +76,9 @@ async function deploy() {
     if (pullLines.length > 0) {
       const summary = pullLines[pullLines.length - 1]; // Usually "Updating abc123..def456"
       console.log(`[${getWIBTimestamp()}] ${summary}`);
+      writeStatus('pulled', `Code pulled: ${summary}`);
+    } else {
+      writeStatus('pulled', 'Code already up to date');
     }
 
     // Check if package.json changed
@@ -99,6 +117,7 @@ async function deploy() {
       }
 
       console.log(`[${getWIBTimestamp()}] ✅ PM2 restart completed!`);
+      writeStatus('completed', '✅ Deployment successful! Service restarted.');
     } else {
       // Fallback: kill existing process and start fresh
       console.log(`[${getWIBTimestamp()}] 🛑 Killing existing node processes...`);
