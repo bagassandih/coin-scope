@@ -2049,6 +2049,13 @@ footer {
   text-align: center;
 }
 
+/* Center loading in closed tab */
+.closed-container > .loading {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 3rem 2rem;
+}
+
 .closed-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
