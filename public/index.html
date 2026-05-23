@@ -98,12 +98,28 @@
     <!-- Tab: Closed Positions -->
     <div class="tab-content" id="tab-closed">
       <div class="closed-header">
+        <!-- Stats Bar -->
+        <div class="closed-stats-bar" id="closedStatsBar">
+          <div class="closed-stat-item">
+            <span class="closed-stat-label">Total Closed</span>
+            <span class="closed-stat-value" id="closedTotal">0</span>
+          </div>
+          <div class="closed-stat-item">
+            <span class="closed-stat-label">Win Rate</span>
+            <span class="closed-stat-value" id="closedWinRate">-</span>
+          </div>
+          <div class="closed-stat-item">
+            <span class="closed-stat-label">Avg PNL</span>
+            <span class="closed-stat-value" id="closedTotalPnl">-</span>
+          </div>
+        </div>
+
         <div class="filter-bar" id="filterBar">
           <span class="filter-label">Filter:</span>
           <button class="filter-btn active" data-filter="all" onclick="filterClosed('all')">All</button>
           <button class="filter-btn" data-filter="take_profit" onclick="filterClosed('take_profit')">Take Profit</button>
           <button class="filter-btn" data-filter="cutloss" onclick="filterClosed('cutloss')">Cutloss</button>
-          <button class="filter-btn" data-filter="stagnant" onclick="filterClosed('stagnant')">Stagnan/Boring</button>
+          <button class="filter-btn" data-filter="stagnant" onclick="filterClosed('stagnant')" title="Stagnan/Boring">Stagnan</button>
           <button class="filter-btn" data-filter="other" onclick="filterClosed('other')">Other</button>
         </div>
       </div>
@@ -147,7 +163,7 @@
               </label>
               <label class="close-reason-option">
                 <input type="radio" name="closeReason" value="stagnant">
-                <span>😴 Stagnan/Boring</span>
+                <span>😴 Stagnan</span>
               </label>
               <label class="close-reason-option">
                 <input type="radio" name="closeReason" value="other">

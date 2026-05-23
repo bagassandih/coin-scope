@@ -776,6 +776,12 @@ async function fetchClosedPositions(filter) {
       }
     });
 
+    // Calculate and update stats
+    updateClosedStats(data.closed);
+
+    // Update filter counts
+    updateFilterCounts();
+
     // Handle empty results
     if (data.closed.length === 0) {
       var emptyTitle, emptyMessage, emptyAction;
@@ -788,7 +794,7 @@ async function fetchClosedPositions(filter) {
         var filterLabels = {
           'take_profit': 'Take Profit',
           'cutloss': 'Cutloss',
-          'stagnant': 'Stagnan/Boring',
+          'stagnant': 'Stagnan',
           'other': 'Other'
         };
         emptyTitle = 'Tidak ada posisi ' + filterLabels[filter];
@@ -819,7 +825,7 @@ async function fetchClosedPositions(filter) {
           tagLabel = 'Cutloss';
         } else if (coin.close_reason === 'stagnant') {
           tagClass = 'stagnant';
-          tagLabel = 'Stagnan/Boring';
+          tagLabel = 'Stagnan';
         } else {
           tagClass = 'other';
           tagLabel = coin.close_reason === 'other' ? 'Other' : coin.close_reason;
@@ -827,9 +833,11 @@ async function fetchClosedPositions(filter) {
 
         var profitClass = '';
         var profitDisplay = '-';
+        var pnlClass = '';
 
         if (coin.performance) {
           profitClass = coin.performance.price_change_percent >= 0 ? 'positive' : 'negative';
+          pnlClass = coin.performance.price_change_percent >= 0 ? 'pnl-positive' : 'pnl-negative';
           profitDisplay = formatPercent(coin.performance.price_change_percent);
         }
 
@@ -837,38 +845,118 @@ async function fetchClosedPositions(filter) {
         var closedDate = new Date(coin.closed_at);
         var holdDays = coin.hold_days || Math.floor((closedDate - addedDate) / (1000 * 60 * 60 * 24));
 
-        var performanceHtml =
-          '<div class="closed-coin-performance">' +
-            '<div class="closed-stat-item">' +
-              '<span class="closed-stat-label">Duration</span>' +
-              '<span class="closed-stat-value">' + holdDays + 'd</span>' +
-            '</div>' +
-            '<div class="closed-stat-item">' +
-              '<span class="closed-stat-label">P/L</span>' +
-              '<span class="closed-stat-value ' + profitClass + '">' + profitDisplay + '</span>' +
-            '</div>' +
-            '<div class="closed-stat-item">' +
-              '<span class="closed-stat-label">Closed</span>' +
-              '<span class="closed-stat-value">' + formatDateCompact(closedDate) + '</span>' +
-            '</div>' +
+        // PNL Section - caption outside badge
+        var pnlHtml =
+          '<div class="pnl-section">' +
+            '<span class="pnl-caption">P/L</span>' +
+            '<span class="pnl-badge ' + pnlClass + '">' + profitDisplay + '</span>' +
           '</div>';
 
+        // Price Context - Entry & Exit prices
+        var entryPrice = coin.entry_price ? formatPrice(coin.entry_price) : '-';
+        var exitPrice = (coin.performance && coin.performance.last_price) ? formatPrice(coin.performance.last_price) : '-';
+
+        var priceContextHtml =
+          '<div class="price-context">' +
+            '<span class="price-entry">Entry: ' + entryPrice + '</span>' +
+            '<span class="price-exit">Exit: ' + exitPrice + '</span>' +
+          '</div>';
+
+        // Closed positions are read-only historical records - no action buttons
         return '<div class="closed-coin-item" onclick="showClosedHistory(' + coin.id + ')">' +
-          '<img src="' + coin.logo + '" alt="' + coin.symbol + '" class="closed-coin-logo" onerror="this.src=\'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E🪙%3C/text%3E%3C/svg%3E\'">' +
+          '<img src="' + coin.logo + '" alt="' + coin.symbol + '" class="closed-coin-logo" onerror="this.src=\'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E🪙%3C/text%3E%3C/svg\3E\'">' +
           '<div class="closed-coin-info">' +
             '<h3>' + coin.name + ' <span class="close-tag-inline ' + tagClass + '">' + tagLabel + '</span></h3>' +
-            '<p>' + coin.symbol + ' • Closed: ' + formatDateCompact(closedDate) + '</p>' +
+            '<p>' + coin.symbol + '</p>' +
           '</div>' +
-          performanceHtml +
-          '<div class="closed-coin-actions" onclick="event.stopPropagation()">' +
-            '<button class="closed-action-btn btn-resume" onclick="resumePosition(' + coin.id + ')">Resume</button>' +
-            '<button class="closed-action-btn btn-delete" onclick="deleteClosedPosition(' + coin.id + ')">Delete</button>' +
+          priceContextHtml +
+          pnlHtml +
+          '<div class="duration-section">' +
+            '<span class="stat-label">Durasi</span>' +
+            '<span class="stat-value">' + holdDays + 'd</span>' +
+          '</div>' +
+          '<div class="closed-date-section">' +
+            '<span class="stat-label">Closed</span>' +
+            '<span class="stat-value">' + formatDateCompact(closedDate) + '</span>' +
           '</div>' +
         '</div>';
       }).join('') +
     '</div>';
   } catch (err) {
     container.innerHTML = '<div class="error">Failed to load: ' + err.message + '</div>';
+  }
+}
+
+// Update stats bar for closed tab
+async function updateClosedStats(closedCoins) {
+  var total = closedCoins.length;
+  var wins = 0;
+  var losses = 0;
+  var totalPnl = 0;
+
+  closedCoins.forEach(function(coin) {
+    if (coin.performance) {
+      var pnl = coin.performance.price_change_percent || 0;
+      totalPnl += pnl;
+      if (pnl > 0) wins++;
+      if (pnl < 0) losses++;
+    }
+  });
+
+  var winRate = total > 0 ? Math.round((wins / total) * 100) : 0;
+  var avgPnl = total > 0 ? totalPnl / total : 0;
+
+  document.getElementById('closedTotal').textContent = total;
+  document.getElementById('closedWinRate').textContent = winRate + '%';
+
+  // Update Avg PNL with win/loss subtext
+  var pnlElement = document.getElementById('closedTotalPnl');
+  pnlElement.innerHTML = formatPercent(avgPnl) +
+    '<div class="closed-stat-subtext">(' + wins + ' profit / ' + losses + ' loss)</div>';
+  pnlElement.className = 'closed-stat-value' + (avgPnl >= 0 ? ' pnl-positive' : ' pnl-negative');
+}
+
+// Update filter count badges
+async function updateFilterCounts() {
+  try {
+    // Fetch counts for each filter
+    var filters = ['all', 'take_profit', 'cutloss', 'stagnant', 'other'];
+
+    var promises = filters.map(async function(f) {
+      var res = await fetch('/api/closed?filter=' + f);
+      var data = await res.json();
+      return { filter: f, count: data.success ? data.closed.length : 0 };
+    });
+
+    var results = await Promise.all(promises);
+
+    results.forEach(function(result) {
+      var btn = document.querySelector('.filter-btn[data-filter="' + result.filter + '"]');
+      if (btn) {
+        // Remove existing count if any
+        var existingCount = btn.querySelector('.filter-count');
+        if (existingCount) {
+          existingCount.remove();
+        }
+
+        // Add count badge
+        var countSpan = document.createElement('span');
+        countSpan.className = 'filter-count';
+        countSpan.textContent = result.count;
+
+        // Append after the text
+        btn.appendChild(countSpan);
+
+        // Mark empty filters
+        if (result.count === 0 && result.filter !== 'all') {
+          btn.classList.add('empty');
+        } else {
+          btn.classList.remove('empty');
+        }
+      }
+    });
+  } catch (err) {
+    // Silently fail
   }
 }
 
@@ -904,7 +992,7 @@ async function showClosedHistory(coinId) {
         '<div>' +
         '<h3>' + data.name + ' (' + data.symbol + ')</h3>' +
         '<p>📅 ' + formatDate(new Date(data.added_at)) + ' → ' + formatDate(new Date(data.closed_at)) + '</p>' +
-        '<p>🏷️ Reason: ' + (data.close_reason === 'take_profit' ? 'Take Profit' : data.close_reason === 'cutloss' ? 'Cutloss' : data.close_reason === 'stagnant' ? 'Stagnan/Boring' : data.close_reason) + '</p>' +
+        '<p>🏷️ Reason: ' + (data.close_reason === 'take_profit' ? 'Take Profit' : data.close_reason === 'cutloss' ? 'Cutloss' : data.close_reason === 'stagnant' ? 'Stagnan' : data.close_reason) + '</p>' +
         '<p class="' + profitClass + '">💰 P/L: ' + formatPercent(priceChangePercent) + '</p>' +
         '</div>' +
         '</div>';
