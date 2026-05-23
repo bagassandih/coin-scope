@@ -85,41 +85,35 @@ async function deploy() {
     }
 
     if (usePM2) {
+      // Direct stop + start (more reliable than restart)
+      console.log(`[${getWIBTimestamp()}] 🔄 Restarting PM2 process...`);
+
+      // Stop and delete from PM2
       try {
-        // Try graceful restart first
-        console.log(`[${getWIBTimestamp()}] 🔄 Attempting PM2 restart...`);
-        await execAsync('pm2 restart coinscope', { cwd: repoPath });
-        console.log(`[${getWIBTimestamp()}] ✅ PM2 restart successful!`);
-      } catch (err) {
-        // If restart fails, do full restart with cleanup
-        console.log(`[${getWIBTimestamp()}] 🛑 PM2 restart failed, doing full restart...`);
-
-        // Stop and delete from PM2
-        try {
-          await execAsync('pm2 stop coinscope', { cwd: repoPath });
-          await execAsync('pm2 delete coinscope', { cwd: repoPath });
-        } catch {
-          // Process might not exist, ignore error
-        }
-
-        // Kill ALL node processes to ensure port is released
-        console.log(`[${getWIBTimestamp()}] 🔪 Killing all node processes...`);
-        try {
-          if (process.platform === 'win32') {
-            await execAsync('taskkill /F /IM node.exe');
-          } else {
-            await execAsync('pkill -f "node"');
-          }
-        } catch {
-          // No processes to kill, ignore
-        }
-
-        // Small delay to ensure port is released
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
-        await execAsync('pm2 start src/server.js --name coinscope', { cwd: repoPath });
-        console.log(`[${getWIBTimestamp()}] ✅ PM2 start successful!`);
+        await execAsync('pm2 stop coinscope', { cwd: repoPath });
+        await execAsync('pm2 delete coinscope', { cwd: repoPath });
+      } catch {
+        // Process might not exist, ignore error
       }
+
+      // Kill ALL node processes to ensure port is released
+      console.log(`[${getWIBTimestamp()}] 🔪 Killing all node processes...`);
+      try {
+        if (process.platform === 'win32') {
+          await execAsync('taskkill /F /IM node.exe', { cwd: repoPath });
+        } else {
+          await execAsync('pkill -f "node"');
+        }
+      } catch {
+        // No processes to kill, ignore
+      }
+
+      // Small delay to ensure port is released
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      await execAsync('pm2 start src/server.js --name coinscope', { cwd: repoPath });
+      console.log(`[${getWIBTimestamp()}] ✅ PM2 restart successful!`);
+    }
     } else {
       // Fallback: kill existing process and start fresh
       console.log(`[${getWIBTimestamp()}] 🛑 Killing existing node processes...`);
