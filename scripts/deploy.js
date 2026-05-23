@@ -43,30 +43,61 @@ async function deploy() {
       console.log(`[${getWIBTimestamp()}] ✅ Dependencies installed`);
     }
 
-    // Check if running under PM2
-    const isPM2 = process.env.PM2_HOME || process.env.NODE_ENV === 'production' || packageChanged;
+    // Check if PM2 is available
+    let usePM2 = false;
+    try {
+      await execAsync('which pm2');
+      usePM2 = true;
+      console.log(`[${getWIBTimestamp()}] 🔧 PM2 detected, using process manager`);
+    } catch {
+      console.log(`[${getWIBTimestamp()}] ℹ️  PM2 not found, will use direct restart`);
+    }
 
-    if (isPM2) {
+    if (usePM2) {
       try {
-        console.log(`[${getWIBTimestamp()}] 🛑 Stopping current process...`);
-        await execAsync('pm2 stop coinscope', { cwd: repoPath });
-        await execAsync('pm2 delete coinscope', { cwd: repoPath });
+        // Try graceful restart first
+        console.log(`[${getWIBTimestamp()}] 🔄 Attempting PM2 restart...`);
+        await execAsync('pm2 restart coinscope', { cwd: repoPath });
+        console.log(`[${getWIBTimestamp()}] ✅ PM2 restart successful!`);
+      } catch (err) {
+        // If restart fails, try stop + start
+        console.log(`[${getWIBTimestamp()}] 🛑 PM2 restart failed, doing full restart...`);
+        try {
+          await execAsync('pm2 stop coinscope', { cwd: repoPath });
+          await execAsync('pm2 delete coinscope', { cwd: repoPath });
+        } catch {
+          // Process might not exist, ignore error
+        }
 
         // Small delay to ensure port is released
         await new Promise(resolve => setTimeout(resolve, 1000));
 
-        console.log(`[${getWIBTimestamp()}] 🚀 Starting fresh process...`);
         await execAsync('pm2 start src/server.js --name coinscope', { cwd: repoPath });
-        console.log(`[${getWIBTimestamp()}] ✅ Deployment completed successfully!`);
-      } catch (err) {
-        // If stop/delete fails (app not running), just start
-        console.log(`[${getWIBTimestamp()}] 🚀 Starting new process...`);
-        await execAsync('pm2 start src/server.js --name coinscope', { cwd: repoPath });
-        console.log(`[${getWIBTimestamp()}] ✅ Deployment completed successfully!`);
+        console.log(`[${getWIBTimestamp()}] ✅ PM2 start successful!`);
       }
     } else {
-      console.log(`[${getWIBTimestamp()}] ℹ️  Running in Manual Mode`);
-      console.log(`[${getWIBTimestamp()}] 📝 To apply changes: pkill -f "node src/server.js" && npm start`);
+      // Fallback: kill existing process and start fresh
+      console.log(`[${getWIBTimestamp()}] 🛑 Killing existing node processes...`);
+      try {
+        await execAsync('pkill -f "node.*server.js"');
+      } catch {
+        // No process running, ignore
+      }
+
+      // Small delay to ensure port is released
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      console.log(`[${getWIBTimestamp()}] 🚀 Starting server...`);
+      // Spawn new process (detached)
+      const { spawn } = await import('child_process');
+      spawn('node', ['src/server.js'], {
+        detached: true,
+        stdio: 'ignore',
+        cwd: repoPath,
+        env: { ...process.env }
+      }).unref();
+
+      console.log(`[${getWIBTimestamp()}] ✅ Server started in background!`);
     }
   } catch (err) {
     console.error(`[${getWIBTimestamp()}] ❌ Deployment error:`, err.message);
