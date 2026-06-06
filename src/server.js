@@ -42,7 +42,7 @@ const WEBHOOK_SECRET = process.env.GITHUB_WEBHOOK_SECRET || 'change-me-in-produc
 const WEBHOOK_RESTART_DELAY = 1000;
 
 // Helper: map coin to response format
-function mapCoinResponse(coin, index, trackedIds) {
+function mapCoinResponse(coin, index, trackedCoinIds) {
   return {
     rank: index + 1,
     id: coin.id,
@@ -59,7 +59,7 @@ function mapCoinResponse(coin, index, trackedIds) {
     tier: coin.tier,
     tierLabel: coin.tierLabel,
     score: coin.weightedScore,
-    tracked: trackedIds.includes(coin.id),
+    tracked: trackedCoinIds.includes(coin.id),
   };
 }
 
@@ -101,7 +101,8 @@ app.get('/api/top5', async (req, res) => {
     const scoredCoins = calculateScores(filterResult.passed);
     const top5 = rankTop5(scoredCoins);
     const tracked = await getTrackedCoins();
-    const trackedIds = tracked.map(t => t.id);
+    // Use coin_id (CMC ID) for checking if a coin is tracked
+    const trackedCoinIds = tracked.map(t => t.coin_id);
 
     res.json({
       success: true,
@@ -109,7 +110,7 @@ app.get('/api/top5', async (req, res) => {
       cacheAge: getCacheAge(),
       universe: coins.length,
       filtered: filterResult.passed.length,
-      top5: top5.map((coin, index) => mapCoinResponse(coin, index, trackedIds)),
+      top5: top5.map((coin, index) => mapCoinResponse(coin, index, trackedCoinIds)),
     });
   } catch (err) {
     log(`❌ Error: ${err.message}`);
@@ -147,11 +148,11 @@ app.post('/api/refresh', async (req, res) => {
 
     // Get tracked coins for UI
     const tracked = await getTrackedCoins();
-    const trackedIds = tracked.map(t => t.id);
+    const trackedCoinIds = tracked.map(t => t.coin_id);
 
     // Save snapshots for ALL tracked coins (including those that didn't pass filter)
     if (tracked.length > 0) {
-      const trackedIdsSet = new Set(trackedIds);
+      const trackedIdsSet = new Set(trackedCoinIds);
 
       // Coins that passed filter already have tier + weightedScore from scorer
       const trackedInScored = scoredCoins.filter(c => trackedIdsSet.has(c.id));
@@ -167,7 +168,12 @@ app.post('/api/refresh', async (req, res) => {
 
       const allTracked = [...trackedInScored, ...trackedNotScored];
       if (allTracked.length > 0) {
-        await saveSnapshot(allTracked);
+        // Add tracking_id to each coin for snapshot
+        const coinsWithTrackingId = allTracked.map(c => {
+          const trackedCoin = tracked.find(t => t.coin_id === c.id);
+          return { ...c, tracking_id: trackedCoin.tracking_id };
+        });
+        await saveSnapshot(coinsWithTrackingId);
         log(`  📸 Saved snapshot for ${allTracked.length} tracked coin(s) (${trackedInScored.length} scored, ${trackedNotScored.length} unfiltered)`);
       }
     }
@@ -178,7 +184,7 @@ app.post('/api/refresh', async (req, res) => {
       cacheAge,
       universe: coins.length,
       filtered: filterResult.passed.length,
-      top5: top5.map((coin, index) => mapCoinResponse(coin, index, trackedIds)),
+      top5: top5.map((coin, index) => mapCoinResponse(coin, index, trackedCoinIds)),
     });
   } catch (err) {
     log(`❌ Error: ${err.message}`);
@@ -222,8 +228,11 @@ app.post('/api/track', async (req, res) => {
     let tracked;
     if (action === 'add') {
       const { mode, entry_price } = req.body;
-      tracked = await addTrackedCoin(req.body.coin, mode || 'cmc', entry_price || null);
+      const result = await addTrackedCoin(req.body.coin, mode || 'cmc', entry_price || null);
+      // Return tracking_id (UUID) so frontend can use it for close/resume
+      tracked = await getTrackedCoins();
     } else if (action === 'remove') {
+      // For remove, coinId is actually tracking_id (UUID)
       await removeTrackedCoin(coinId);
       tracked = await getTrackedCoins();
     } else {
@@ -254,7 +263,7 @@ app.post('/api/close', async (req, res) => {
     if (!coinId) {
       return res.status(400).json({
         success: false,
-        error: 'coinId is required',
+        error: 'coinId (tracking_id) is required',
       });
     }
 
@@ -265,6 +274,7 @@ app.post('/api/close', async (req, res) => {
       });
     }
 
+    // coinId is now tracking_id (UUID)
     await closePosition(coinId, reason);
     const tracked = await getTrackedCoins();
 
@@ -289,10 +299,11 @@ app.post('/api/resume', async (req, res) => {
     if (!coinId) {
       return res.status(400).json({
         success: false,
-        error: 'coinId is required',
+        error: 'coinId (tracking_id) is required',
       });
     }
 
+    // coinId is now tracking_id (UUID)
     await resumePosition(coinId);
     const tracked = await getTrackedCoins();
 
@@ -317,7 +328,8 @@ app.get('/api/closed', async (req, res) => {
 
     // Enrich with latest snapshot data for performance calculation
     const enriched = await Promise.all(closed.map(async (coin) => {
-      const snapshots = await getCoinSnapshots(coin.id);
+      // coin.tracking_id is the UUID
+      const snapshots = await getCoinSnapshots(coin.tracking_id);
       const firstSnapshot = snapshots[0];
       const lastSnapshot = snapshots[snapshots.length - 1];
 
@@ -340,9 +352,12 @@ app.get('/api/closed', async (req, res) => {
       const addedDate = new Date(coin.added_at);
       const holdDays = Math.floor((closedDate - addedDate) / (1000 * 60 * 60 * 24));
 
+      // Use coin_id (CMC ID) for logo URL
+      const cmcId = coin.coin_id;
+
       return {
         ...coin,
-        logo: `https://s2.coinmarketcap.com/static/img/coins/64x64/${coin.id}.png`,
+        logo: `https://s2.coinmarketcap.com/static/img/coins/64x64/${cmcId}.png`,
         performance,
         hold_days: holdDays,
       };
@@ -365,12 +380,12 @@ app.get('/api/closed', async (req, res) => {
 app.get('/api/closed/:coinId/history', async (req, res) => {
   try {
     const { coinId } = req.params;
-    const id = parseInt(coinId);
-    const snapshots = await getCoinSnapshots(id);
+    // coinId is now tracking_id (UUID), not an integer
+    const snapshots = await getCoinSnapshots(coinId);
 
     // Get coin info from tracked_coins (even though closed)
     const closed = await getClosedPositions();
-    const coinInfo = closed.find(c => c.id === id);
+    const coinInfo = closed.find(c => c.id === coinId);
 
     if (!coinInfo) {
       return res.status(404).json({
@@ -379,12 +394,15 @@ app.get('/api/closed/:coinId/history', async (req, res) => {
       });
     }
 
+    // Use coin_id (CMC ID) for logo URL
+    const cmcId = coinInfo.coin_id || coinInfo.id;
+
     res.json({
       success: true,
-      coinId: id,
+      coinId: coinId,
       name: coinInfo.name,
       symbol: coinInfo.symbol,
-      logo: `https://s2.coinmarketcap.com/static/img/coins/64x64/${id}.png`,
+      logo: `https://s2.coinmarketcap.com/static/img/coins/64x64/${cmcId}.png`,
       added_at: coinInfo.added_at,
       closed_at: coinInfo.closed_at,
       close_reason: coinInfo.close_reason,
@@ -403,13 +421,13 @@ app.get('/api/closed/:coinId/history', async (req, res) => {
 app.get('/api/history/:coinId', async (req, res) => {
   try {
     const { coinId } = req.params;
-    const id = parseInt(coinId);
-    const snapshots = await getCoinSnapshots(id);
-    const performance = await getCoinPerformance(id);
+    // coinId is now tracking_id (UUID), not an integer
+    const snapshots = await getCoinSnapshots(coinId);
+    const performance = await getCoinPerformance(coinId);
 
     // Include tracking mode + entry info
     const tracked = await getTrackedCoins();
-    const coinTracking = tracked.find(c => c.id === id);
+    const coinTracking = tracked.find(c => c.id === coinId);
     const tracking_mode = coinTracking ? (coinTracking.tracking_mode || 'cmc') : 'cmc';
     const entry_price = coinTracking ? coinTracking.entry_price : null;
     const entry_timestamp = coinTracking ? coinTracking.entry_timestamp : null;
@@ -429,12 +447,13 @@ app.get('/api/history/:coinId', async (req, res) => {
       };
     }
 
-    // Construct logo URL from CMC ID
-    const logo = coinTracking?.logo || `https://s2.coinmarketcap.com/static/img/coins/64x64/${id}.png`;
+    // Construct logo URL from CMC ID (coin_id column)
+    const cmcId = coinTracking?.coin_id || coinTracking?.id;
+    const logo = coinTracking?.logo || `https://s2.coinmarketcap.com/static/img/coins/64x64/${cmcId}.png`;
 
     res.json({
       success: true,
-      coinId: id,
+      coinId: coinId,
       name: coinTracking?.name || null,
       symbol: coinTracking?.symbol || null,
       logo,

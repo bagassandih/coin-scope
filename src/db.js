@@ -45,7 +45,7 @@ export async function getClosedPositions(filterReason = null) {
   return data;
 }
 
-export async function closePosition(coinId, reason) {
+export async function closePosition(trackingId, reason) {
   const { data, error } = await supabase
     .from('tracked_coins')
     .update({
@@ -53,7 +53,7 @@ export async function closePosition(coinId, reason) {
       closed_at: new Date().toISOString(),
       close_reason: reason,
     })
-    .eq('id', coinId)
+    .eq('tracking_id', trackingId)
     .select()
     .single();
 
@@ -61,7 +61,7 @@ export async function closePosition(coinId, reason) {
   return data;
 }
 
-export async function resumePosition(coinId) {
+export async function resumePosition(trackingId) {
   const { data, error } = await supabase
     .from('tracked_coins')
     .update({
@@ -69,7 +69,7 @@ export async function resumePosition(coinId) {
       closed_at: null,
       close_reason: null,
     })
-    .eq('id', coinId)
+    .eq('tracking_id', trackingId)
     .select()
     .single();
 
@@ -78,17 +78,17 @@ export async function resumePosition(coinId) {
 }
 
 export async function addTrackedCoin(coin, mode = 'cmc', entryPrice = null) {
+  // Always insert a new row - allows multiple tracking cycles for the same coin
   const { data, error } = await supabase
     .from('tracked_coins')
-    .upsert({
-      id: coin.id,
+    .insert({
+      coin_id: coin.id,
       symbol: coin.symbol,
       name: coin.name,
       tracking_mode: mode,
       entry_price: mode === 'entry' ? entryPrice : null,
       entry_timestamp: mode === 'entry' ? new Date().toISOString() : null,
-    }, {
-      onConflict: 'id'
+      status: 'active',
     })
     .select()
     .single();
@@ -97,21 +97,23 @@ export async function addTrackedCoin(coin, mode = 'cmc', entryPrice = null) {
   return data;
 }
 
-export async function removeTrackedCoin(coinId) {
+export async function removeTrackedCoin(trackingId) {
   const { error } = await supabase
     .from('tracked_coins')
     .delete()
-    .eq('id', coinId);
+    .eq('tracking_id', trackingId);
 
   if (error) throw error;
   return true;
 }
 
 export async function isCoinTracked(coinId) {
+  // Check if there's an ACTIVE tracking for this coin
   const { data, error } = await supabase
     .from('tracked_coins')
-    .select('id')
-    .eq('id', coinId)
+    .select('tracking_id')
+    .eq('coin_id', coinId)
+    .eq('status', 'active')
     .maybeSingle();
 
   if (error) throw error;
@@ -126,7 +128,7 @@ export async function saveSnapshot(coin) {
   const { data, error } = await supabase
     .from('snapshots')
     .insert({
-      coin_id: coin.id,
+      tracking_id: coin.tracking_id,
       symbol: coin.symbol,
       name: coin.name,
       price: coin.price,
@@ -148,7 +150,7 @@ export async function saveSnapshot(coin) {
 
 export async function saveSnapshots(coins) {
   const snapshots = coins.map(coin => ({
-    coin_id: coin.id,
+    tracking_id: coin.tracking_id,
     symbol: coin.symbol,
     name: coin.name,
     price: coin.price,
@@ -171,14 +173,14 @@ export async function saveSnapshots(coins) {
   return data;
 }
 
-export async function getSnapshots(coinId = null) {
+export async function getSnapshots(trackingId = null) {
   let query = supabase
     .from('snapshots')
     .select('*')
     .order('timestamp', { ascending: false });
 
-  if (coinId) {
-    query = query.eq('coin_id', coinId);
+  if (trackingId) {
+    query = query.eq('tracking_id', trackingId);
   }
 
   const { data, error } = await query;
@@ -186,11 +188,11 @@ export async function getSnapshots(coinId = null) {
   return data;
 }
 
-export async function getCoinSnapshots(coinId) {
+export async function getCoinSnapshots(trackingId) {
   const { data, error } = await supabase
     .from('snapshots')
     .select('*')
-    .eq('coin_id', coinId)
+    .eq('tracking_id', trackingId)
     .order('timestamp', { ascending: true });
 
   if (error) throw error;
@@ -209,10 +211,10 @@ export async function getTrackedWithLatestSnapshot() {
 
   if (error) throw error;
 
-  // Add logo URL
+  // Add logo URL - use coin_id (CMC ID) for the logo
   return data.map(coin => ({
     ...coin,
-    logo: `https://s2.coinmarketcap.com/static/img/coins/64x64/${coin.id}.png`,
+    logo: `https://s2.coinmarketcap.com/static/img/coins/64x64/${coin.coin_id}.png`,
   }));
 }
 
@@ -267,8 +269,8 @@ export async function getCacheAge(key) {
 // PERFORMANCE ANALYTICS
 // ============================================
 
-export async function getCoinPerformance(coinId) {
-  const snapshots = await getCoinSnapshots(coinId);
+export async function getCoinPerformance(trackingId) {
+  const snapshots = await getCoinSnapshots(trackingId);
 
   if (snapshots.length < 2) return null;
 
@@ -289,11 +291,11 @@ export async function getCoinPerformance(coinId) {
   };
 }
 
-export async function getSnapshotHistory(coinId, limit = 30) {
+export async function getSnapshotHistory(trackingId, limit = 30) {
   const { data, error } = await supabase
     .from('snapshots')
     .select('*')
-    .eq('coin_id', coinId)
+    .eq('tracking_id', trackingId)
     .order('timestamp', { ascending: false })
     .limit(limit);
 
@@ -314,11 +316,12 @@ export async function refreshSnapshotsForTracked(coinsData) {
   const now = new Date().toISOString();
 
   for (const trackedCoin of tracked) {
-    const coinData = coinsData.find(c => c.id === trackedCoin.id);
+    // trackedCoin.id is tracking_id (UUID), trackedCoin.coin_id is CMC coin ID
+    const coinData = coinsData.find(c => c.id === trackedCoin.coin_id);
 
     if (coinData) {
       snapshots.push({
-        coin_id: trackedCoin.id,
+        tracking_id: trackedCoin.id, // Use tracking_id (UUID) for snapshot
         symbol: trackedCoin.symbol,
         name: trackedCoin.name,
         price: coinData.quote.USD.price,
