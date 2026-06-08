@@ -2,6 +2,63 @@
 
 All notable changes to CoinScope will be documented in this file.
 
+## [1.5.0] - 2026-06-08
+
+### Added - AI Analyze Feature
+
+**Core Functionality:**
+- AI-powered analysis for Top 5 coins using NVIDIA NIM API (Llama 3.3 70B Instruct)
+- PICK/PASS recommendations with detailed reasoning
+- Server-side AI calls (API key secured on backend)
+- Supabase caching with 3600s TTL
+- Re-Analyze functionality when cache exists
+
+**UI Elements:**
+- AI Analyze button in Top 5 tab with 30s cooldown
+- AI badges on coin cards (🟢 PICK / 🔴 PASS) displayed between Score and metrics
+- Detailed reasoning modal on card click
+- Loading overlay with progress indication
+- SweetAlert2 confirmations for analyze/re-analyze actions
+
+**Button States:**
+- "🤖 AI Analyze" - Initial state or when no cache exists
+- "🔄 Re-Analyze" - When cached analysis exists
+- "Analyze in Xs" - During cooldown countdown
+
+**AI Output (Indonesian):**
+- Recommendation: PICK atau PASS
+- Reasoning: 2-3 kalimat penjelasan
+- Breakdown: Momentum, volume, market cap tier, score analysis
+
+**API Endpoint:**
+- GET `/api/analyze?refresh=false` - Use cache if available
+- GET `/api/analyze?refresh=true` - Force fresh AI call
+
+**Data Flow:**
+1. User clicks Analyze → Confirmation → Loading
+2. Server checks Supabase cache (TTL 3600s)
+3. Cache miss → Call NVIDIA API → Store results
+4. Returns analysis with PICK/PASS + reasoning
+5. Renders badges on coin cards
+6. Click card → Shows detailed breakdown modal
+
+**Environment Variables:**
+- NVIDIA_API_KEY - NVIDIA NIM API key
+- NVIDIA_MODEL - Model name (default: meta/llama-3.3-70b-instruct)
+- NVIDIA_API_URL - API endpoint URL
+
+### Fixed
+- Tracked tab card click showing "null(null)" in title - fixed to use tracking_id
+- Closed tab card click failing with UUID error - fixed to use tracking_id
+
+### Technical
+- New file: `src/nvidia.js` - NVIDIA API integration module
+- Cache key: `ai_analysis_top5`
+- Position-based coin_id matching (AI returns in same order as input)
+- Frontend variables: `aiAnalysisResults`, `hasAiCache`, `aiCooldown`
+
+---
+
 ## [1.4.0] - 2026-05-23
 
 ### Added - Closed Tab Redesign
