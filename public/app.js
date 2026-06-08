@@ -142,7 +142,7 @@ async function loadTrackedCoins() {
           }
         }
 
-        return '<div class="tracked-coin-item" onclick="showCoinHistory(' + item.id + ', \'' + item.symbol + '\')">' +
+        return '<div class="tracked-coin-item" onclick="showCoinHistory(\'' + item.id + '\', \'' + item.symbol + '\')">' +
           '<img src="' + item.logo + '" alt="' + item.symbol + '" class="tracked-coin-logo" onerror="this.src=\'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E🪙%3C/text%3E%3C/svg%3E\'">' +
           '<div class="tracked-coin-info">' +
             '<h3>' + item.name + ' (' + item.symbol + ') ' + modeBadge + '</h3>' +
@@ -150,8 +150,8 @@ async function loadTrackedCoins() {
           '</div>' +
           performanceHtml +
           '<div class="tracked-coin-actions" onclick="event.stopPropagation()">' +
-            '<button class="untrack-btn btn-close" onclick="openCloseModal(' + item.id + ', \'' + item.name + '\', event)">Close</button>' +
-            '<button class="untrack-btn btn-untrack" onclick="untrackCoin(' + item.id + ', \'' + item.symbol + '\', event)">Untrack</button>' +
+            '<button class="untrack-btn btn-close" onclick="openCloseModal(\'' + item.id + '\', \'' + item.name + '\', event)">Close</button>' +
+            '<button class="untrack-btn btn-untrack" onclick="untrackCoin(\'' + item.id + '\', \'' + item.symbol + '\', event)">Untrack</button>' +
           '</div>' +
         '</div>';
       }).join('') +
@@ -1127,7 +1127,11 @@ async function deleteClosedPosition(coinId) {
 // CLOSE POSITION MODAL
 // ============================================
 
-function openCloseModal(coinId, coinName) {
+function openCloseModal(coinId, coinName, event) {
+  if (event) {
+    event.stopPropagation();
+  }
+
   currentCloseCoinId = coinId;
 
   // Reset form
