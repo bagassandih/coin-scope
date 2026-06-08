@@ -3,6 +3,7 @@ import { fetchCoins, extractCoinData } from './fetcher.js';
 import { hardFilter } from './filter.js';
 import { calculateScores, rankTop5, getMarketCapTierScore } from './scorer.js';
 import { getCachedData, getCacheAge } from './cache.js';
+import { analyzeCoins } from './nvidia.js';
 import {
   getTrackedCoins,
   addTrackedCoin,
@@ -114,6 +115,54 @@ app.get('/api/top5', async (req, res) => {
     });
   } catch (err) {
     log(`❌ Error: ${err.message}`);
+    console.error(err.stack);
+    res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+});
+
+// AI Analysis endpoint
+app.get('/api/analyze', async (req, res) => {
+  try {
+    const { refresh = 'false' } = req.query;
+    const forceRefresh = refresh === 'true';
+
+    log('AI Analysis request received');
+
+    // Get cached data
+    const cached = getCachedData();
+    if (!cached || !cached.data) {
+      return res.status(400).json({
+        success: false,
+        error: 'No data available. Refresh data first.',
+      });
+    }
+
+    // Process data to get top5
+    const coins = extractCoinData(cached.data);
+    const filterResult = hardFilter(coins);
+
+    if (filterResult.passed.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'No coins passed the filter. Refresh data first.',
+      });
+    }
+
+    const scoredCoins = calculateScores(filterResult.passed);
+    const top5 = rankTop5(scoredCoins);
+
+    const analysis = await analyzeCoins(top5, forceRefresh);
+
+    res.json({
+      success: true,
+      source: forceRefresh ? 'api' : 'cache',
+      analysis,
+    });
+  } catch (err) {
+    log(`❌ AI Analysis error: ${err.message}`);
     console.error(err.stack);
     res.status(500).json({
       success: false,
@@ -385,7 +434,7 @@ app.get('/api/closed/:coinId/history', async (req, res) => {
 
     // Get coin info from tracked_coins (even though closed)
     const closed = await getClosedPositions();
-    const coinInfo = closed.find(c => c.id === coinId);
+    const coinInfo = closed.find(c => c.tracking_id === coinId);
 
     if (!coinInfo) {
       return res.status(404).json({
@@ -427,7 +476,7 @@ app.get('/api/history/:coinId', async (req, res) => {
 
     // Include tracking mode + entry info
     const tracked = await getTrackedCoins();
-    const coinTracking = tracked.find(c => c.id === coinId);
+    const coinTracking = tracked.find(c => c.tracking_id === coinId);
     const tracking_mode = coinTracking ? (coinTracking.tracking_mode || 'cmc') : 'cmc';
     const entry_price = coinTracking ? coinTracking.entry_price : null;
     const entry_timestamp = coinTracking ? coinTracking.entry_timestamp : null;

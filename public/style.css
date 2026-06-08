@@ -2839,3 +2839,239 @@ input:focus-visible,
 .skip-link:focus {
   top: 0;
 }
+
+/* ============================================
+   AI ANALYZE BUTTON
+   ============================================ */
+
+.ai-analyze-btn {
+  background: linear-gradient(135deg, #8b5cf6, #6366f1);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+}
+
+.ai-analyze-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.5);
+}
+
+.ai-analyze-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.ai-analyze-btn .loading-spinner {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+
+.ai-analyze-btn.analyzing .icon {
+  display: none;
+}
+
+.ai-analyze-btn:not(.analyzing) .loading-spinner {
+  display: none;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================
+   AI ANALYSIS MODAL
+   ============================================ */
+
+.modal-large {
+  max-width: 800px;
+  width: 90%;
+}
+
+.ai-coin-card {
+  background: #1e293b;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  border-left: 4px solid #64748b;
+}
+
+.ai-coin-card.recommendation-PICK {
+  border-left-color: #10b981;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), #1e293b);
+}
+
+.ai-coin-card.recommendation-PASS {
+  border-left-color: #ef4444;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), #1e293b);
+}
+
+.ai-coin-card.recommendation-ERROR {
+  border-left-color: #64748b;
+  opacity: 0.7;
+}
+
+.ai-coin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.ai-coin-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.ai-recommendation {
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+}
+
+.ai-recommendation.PICK {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+}
+
+.ai-recommendation.PASS {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+}
+
+.ai-recommendation.ERROR {
+  background: #64748b;
+  color: white;
+}
+
+.ai-reasoning {
+  color: #e2e8f0;
+  line-height: 1.6;
+  margin-bottom: 12px;
+  font-size: 0.95rem;
+}
+
+.ai-breakdown {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.ai-breakdown li {
+  color: #94a3b8;
+  padding: 4px 0;
+  padding-left: 20px;
+  position: relative;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.ai-breakdown li:before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: #6366f1;
+  font-weight: bold;
+}
+
+.cache-status {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  margin-right: auto;
+}
+
+/* Mobile responsive for AI modal */
+@media (max-width: 768px) {
+  .modal-large {
+    width: 95%;
+    max-height: 80vh;
+  }
+
+  .ai-coin-card {
+    margin-bottom: 12px;
+    padding: 12px;
+  }
+
+  .ai-coin-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .ai-breakdown li {
+    font-size: 0.85rem;
+  }
+}
+
+/* ============================================
+   AI BADGE ON COIN CARDS
+   ============================================ */
+
+.ai-badge-wrapper {
+  display: flex;
+  justify-content: center;
+  margin: 8px 0;
+}
+
+.ai-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ai-badge-pick {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.1));
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.ai-badge-pass {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.1));
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* AI Recommendation in SweetAlert Popup */
+.ai-recommendation-popup {
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+}
+
+.ai-recommendation-popup.PICK {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+}
+
+.ai-recommendation-popup.PASS {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+}
+
+/* Make coin card clickable */
+.coin-card-inner {
+  cursor: pointer;
+}
+
+.coin-card-inner:hover {
+  transform: translateY(-2px);
+  transition: transform 0.2s ease;
+}

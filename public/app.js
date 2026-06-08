@@ -4,6 +4,12 @@ var refreshCooldown = 30; // seconds
 var refreshCountdownInterval = null;
 var currentTab = 'top5';
 
+// AI Analysis variables
+var aiAnalysisResults = null;
+var aiCooldown = 30; // seconds
+var aiCountdownInterval = null;
+var hasAiCache = false; // Track if AI cache exists
+
 // Loading Overlay Functions
 function showLoading(message) {
   var overlay = document.getElementById('loadingOverlay');
@@ -269,6 +275,173 @@ function formatPercent(value) {
   return sign + value.toFixed(1) + '%';
 }
 
+// ============================================
+// AI ANALYSIS
+// ============================================
+
+async function analyzeTop5() {
+  var btn = document.getElementById('aiAnalyzeBtn');
+
+  // Check if button is in cooldown
+  if (btn.disabled) return;
+
+  // Check if we have top5 data
+  if (!currentData || !currentData.top5 || currentData.top5.length === 0) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'No Data',
+      text: 'Refresh data first before analyzing.',
+      background: '#1e293b',
+      color: '#f8fafc',
+    });
+    return;
+  }
+
+  // Check if this is a re-analyze (has cached results)
+  var isReAnalyze = hasAiCache || aiAnalysisResults !== null;
+
+  // Show confirmation dialog
+  var result = await Swal.fire({
+    title: isReAnalyze ? '🔄 Re-Analyze Top 5 Coins?' : '🤖 Analyze Top 5 Coins?',
+    text: isReAnalyze
+      ? 'This will fetch fresh AI analysis, ignoring the cache. Takes about 10-15 seconds.'
+      : 'AI will analyze each coin and provide PICK/PASS recommendations. Takes about 10-15 seconds.',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: isReAnalyze ? 'Re-Analyze' : 'Analyze',
+    cancelButtonText: 'Cancel',
+    background: '#1e293b',
+    color: '#f8fafc',
+    confirmButtonColor: isReAnalyze ? '#f59e0b' : '#8b5cf6',
+  });
+
+  if (!result.isConfirmed) return;
+
+  // Show loading overlay
+  showLoading(isReAnalyze ? '🔄 Re-analyzing with fresh AI data...' : '🤖 Analyzing coins with AI...');
+
+  try {
+    // Use refresh=true for re-analyze, refresh=false for first analyze
+    var response = await fetch('/api/analyze?refresh=' + (isReAnalyze ? 'true' : 'false'));
+    var data = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.error);
+    }
+
+    // Store results globally
+    aiAnalysisResults = data.analysis;
+    hasAiCache = true; // Mark that we now have cached results
+
+    // Re-render coins with badges
+    renderCoins(currentData);
+
+    // Start cooldown
+    startAiCooldown();
+
+    Swal.fire({
+      icon: 'success',
+      title: isReAnalyze ? 'Re-Analysis Complete!' : 'Analysis Complete!',
+      text: 'Click on any coin card to see detailed reasoning.',
+      timer: 2000,
+      showConfirmButton: false,
+      background: '#1e293b',
+      color: '#f8fafc',
+    });
+  } catch (err) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Analysis Failed',
+      text: err.message,
+      background: '#1e293b',
+      color: '#f8fafc',
+    });
+  } finally {
+    hideLoading();
+  }
+}
+
+function startAiCooldown() {
+  var btn = document.getElementById('aiAnalyzeBtn');
+  var remaining = aiCooldown;
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="icon">🤖</span> Analyze in <span id="aiCountdownSeconds">' + remaining + '</span>s';
+
+  var updateCount = function() {
+    remaining--;
+    var countdownEl = document.getElementById('aiCountdownSeconds');
+    if (countdownEl) countdownEl.textContent = remaining;
+
+    if (remaining <= 0) {
+      clearInterval(aiCountdownInterval);
+      aiCountdownInterval = null;
+      btn.disabled = false;
+      // Show Re-Analyze if we have cached results
+      btn.innerHTML = hasAiCache
+        ? '<span class="icon">🔄</span> Re-Analyze'
+        : '<span class="icon">🤖</span> AI Analyze';
+    }
+  };
+
+  updateCount();
+  aiCountdownInterval = setInterval(updateCount, 1000);
+}
+
+function showAiReasoning(coinId) {
+  if (!aiAnalysisResults) return;
+
+  var result = aiAnalysisResults.find(function(r) { return r.coin_id == coinId || r.symbol === coinId; });
+  if (!result) {
+    Swal.fire({
+      icon: 'info',
+      title: 'No Analysis',
+      text: 'AI analysis not available for this coin.',
+      background: '#1e293b',
+      color: '#f8fafc',
+    });
+    return;
+  }
+
+  var recClass = result.recommendation || 'ERROR';
+  var recLabel = result.recommendation || 'ERROR';
+  var coinName = result.name + ' (' + result.symbol + ')';
+
+  var html = '<div style="text-align:left">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">' +
+      '<span style="font-size:1.2rem;font-weight:700;color:#f8fafc">' + coinName + '</span>' +
+      '<span class="ai-recommendation-popup ' + recClass + '">' + recLabel + '</span>' +
+    '</div>';
+
+  if (result.reasoning) {
+    html += '<p style="color:#e2e8f0;line-height:1.6;margin-bottom:16px">' + result.reasoning + '</p>';
+  }
+
+  if (result.breakdown && result.breakdown.length > 0) {
+    html += '<ul style="list-style:none;padding:0;margin:0">';
+    result.breakdown.forEach(function(point) {
+      html += '<li style="color:#94a3b8;padding:4px 0;padding-left:20px;position:relative;font-size:0.9rem;line-height:1.5">';
+      html += '<span style="position:absolute;left:0;color:#6366f1;font-weight:bold">•</span> ' + point;
+      html += '</li>';
+    });
+    html += '</ul>';
+  }
+
+  html += '</div>';
+
+  Swal.fire({
+    title: '',
+    html: html,
+    background: '#1e293b',
+    color: '#f8fafc',
+    width: '600px',
+    showConfirmButton: true,
+    confirmButtonText: 'Close',
+    confirmButtonColor: '#6366f1',
+  });
+}
+
+
 function formatTimestamp(ts) {
   // Handle both Unix timestamp (number) and ISO string (from Supabase)
   var date;
@@ -342,7 +515,7 @@ function renderCoins(data) {
         '<input type="checkbox" class="track-checkbox" data-id="' + coin.id + '" data-name="' + coin.name + '" data-symbol="' + coin.symbol + '"' + (coin.tracked ? ' checked' : '') + '>' +
         '<span class="custom-checkbox"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>' +
       '</label>' +
-      '<div class="coin-card-inner">' +
+      '<div class="coin-card-inner" onclick="showAiReasoning(' + coin.id + ')">' +
         '<div class="coin-card-header">' +
           '<div class="coin-card-rank ' + rankClass + '">#' + coin.rank + '</div>' +
           '<img src="' + coin.logo + '" alt="' + coin.name + '" class="coin-logo" onerror="this.src=\'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E🪙%3C/text%3E%3C/svg%3E\'">' +
@@ -362,6 +535,15 @@ function renderCoins(data) {
             '<div class="score-label">Score</div>' +
           '</div>' +
         '</div>' +
+        ((aiAnalysisResults && (function() {
+          var aiResult = aiAnalysisResults.find(function(r) { return r.coin_id === coin.id || r.symbol === coin.symbol; });
+          if (aiResult && aiResult.recommendation && !aiResult.error) {
+            var recClass = aiResult.recommendation === 'PICK' ? 'ai-badge-pick' : 'ai-badge-pass';
+            var recLabel = aiResult.recommendation === 'PICK' ? '✓ PICK' : '✗ PASS';
+            return '<div class="ai-badge-wrapper"><span class="ai-badge ' + recClass + '">' + recLabel + '</span></div>';
+          }
+          return '';
+        })()) || '') +
         '<div class="coin-card-metrics">' +
           '<div class="metric-item"><span class="metric-label">7d Change</span><span class="metric-value ' + (coin.percent_change_7d >= 0 ? 'positive' : 'negative') + '">' + formatPercent(coin.percent_change_7d) + '</span></div>' +
           '<div class="metric-item"><span class="metric-label">24h Change</span><span class="metric-value ' + (coin.percent_change_24h >= 0 ? 'positive' : 'negative') + '">' + formatPercent(coin.percent_change_24h) + '</span></div>' +
@@ -498,6 +680,8 @@ async function fetchData() {
 
       // Update tracked count
       updateTrackedCount();
+      // Check for AI cache
+      checkAiCache();
     } else {
       Swal.fire({
         icon: 'error',
@@ -533,6 +717,30 @@ async function updateTrackedCount() {
   }
 }
 
+// Check if AI cache exists and update button
+async function checkAiCache() {
+  try {
+    var response = await fetch('/api/analyze');
+    var data = await response.json();
+
+    if (data.success && data.analysis && data.analysis.length > 0) {
+      hasAiCache = true;
+      aiAnalysisResults = data.analysis;
+      // Update button to show Re-Analyze
+      var btn = document.getElementById('aiAnalyzeBtn');
+      if (btn && !btn.disabled) {
+        btn.innerHTML = '<span class="icon">🔄</span> Re-Analyze';
+      }
+      // Re-render coins with badges
+      if (currentData) {
+        renderCoins(currentData);
+      }
+    }
+  } catch (err) {
+    // No cache or error - button stays as "AI Analyze"
+  }
+}
+
 async function refreshData() {
   var btn = document.getElementById('refreshBtn');
   if (btn.disabled) return;
@@ -547,6 +755,8 @@ async function refreshData() {
       currentData = data;
       renderCoins(data);
       updateStats(data);
+      // Check for AI cache after refresh
+      checkAiCache();
 
       Swal.fire({
         icon: 'success',
@@ -863,7 +1073,7 @@ async function fetchClosedPositions(filter) {
           '</div>';
 
         // Closed positions are read-only historical records - no action buttons
-        return '<div class="closed-coin-item" onclick="showClosedHistory(' + coin.id + ')">' +
+        return '<div class="closed-coin-item" onclick="showClosedHistory(\'' + coin.tracking_id + '\')">' +
           '<img src="' + coin.logo + '" alt="' + coin.symbol + '" class="closed-coin-logo" onerror="this.src=\'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E🪙%3C/text%3E%3C/svg\3E\'">' +
           '<div class="closed-coin-info">' +
             '<h3>' + coin.name + ' <span class="close-tag-inline ' + tagClass + '">' + tagLabel + '</span></h3>' +
