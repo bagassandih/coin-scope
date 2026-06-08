@@ -14,14 +14,14 @@
 | [06-output-spec.md](./06-output-spec.md) | Spesifikasi format output terminal |
 | [07-open-questions.md](./07-open-questions.md) | Pertanyaan yang perlu dijawab sebelum dev (✅ RESOLVED) |
 | [08-roadmap.md](./08-roadmap.md) | Roadmap versi v1.0 s/d v2.0 |
-| [09-changelog.md](./09-changelog.md) | **NEW:** Changelog & implementation notes v1.0 |
+| [10-ai-analyze.md](./10-ai-analyze.md) | AI Analyze feature documentation |
 
 ## 🎯 Quick Reference
 
-### Algoritma Scoring (v1.1)
+### Algoritma Scoring (v1.2)
 
 ```
-Weighted Score = (S_7d × 30%) + (S_30d × 15%) + (S_vol × 30%) + (S_mcap × 20%) + (S_24h × 5%)
+Weighted Score = (S_7d × 12%) + (S_30d × 48%) + (S_vol × 25%) + (S_mcap × 10%) + (S_24h × 5%) + Bonus (0-20)
 ```
 
 **30d Hybrid Logic:**
@@ -53,7 +53,10 @@ Fetch Universe → Hard Filter → Normalisasi → Scoring → Ranking → Displ
 | v1.1 | ✅ **Released** | 30d Confirmation Scoring + Historical Tracking |
 | v1.1.1 | ✅ **Released** | **Supabase Integration** |
 | v1.2 | ✅ **Released** | **Hold Strategy Optimization** |
-| v1.3 | 🔮 Planned | Otomasi |
+| v1.3 | ✅ **Released** | **UX Improvements (Mobile)** |
+| v1.4 | ✅ **Released** | **Closed Tab Redesign** |
+| v1.5 | ✅ **Released** | **AI Analyze Feature** |
+| v1.6 | 🔮 Planned | Otomasi |
 | v2.0 | 🔮 Planned | Scale Up |
 
 ## ✅ Open Questions - RESOLVED
