@@ -60,25 +60,23 @@ export function displayTable(topCoins) {
       chalk.white.bold('Koin'),
       chalk.white.bold('Harga'),
       chalk.white.bold('7d'),
+      chalk.white.bold('30d'),
       chalk.white.bold('24h'),
-      chalk.white.bold('Volume'),
-      chalk.white.bold('Market Cap'),
       chalk.white.bold('Score'),
     ],
-    colWidths: [4, 20, 14, 8, 8, 12, 16, 8],
-    colAligns: ['middle', 'left', 'right', 'right', 'right', 'right', 'left', 'middle'],
+    colWidths: [4, 18, 12, 7, 7, 7, 8],
+    colAligns: ['middle', 'left', 'right', 'right', 'right', 'right', 'middle'],
   });
 
   topCoins.forEach((coin, index) => {
-    const name = `${coin.name} (${coin.symbol})`.slice(0, 18);
+    const name = `${coin.name} (${coin.symbol})`.slice(0, 17);
     const price = formatPrice(coin.price);
     const change7d = getColorForPercent(coin.percent_change_7d)(formatPercent(coin.percent_change_7d));
+    const change30d = getColorForPercent(coin.percent_change_30d)(formatPercent(coin.percent_change_30d));
     const change24h = getColorForPercent(coin.percent_change_24h)(formatPercent(coin.percent_change_24h));
-    const volume = formatCurrency(coin.volume_24h);
-    const mcap = formatCurrency(coin.market_cap) + ' ' + getTierColor(coin.tier)(`[${coin.tierLabel}]`);
     const score = chalk.bold(coin.weightedScore.toFixed(1));
 
-    table.push([index + 1, name, price, change7d, change24h, volume, mcap, score]);
+    table.push([index + 1, name, price, change7d, change30d, change24h, score]);
   });
 
   console.log(table.toString());
@@ -86,18 +84,39 @@ export function displayTable(topCoins) {
 
 export function displayFooter() {
   console.log(chalk.cyan('╠═══════════════════════════════════════════════════════════════════════════════╣'));
-  console.log(chalk.gray(' [L] = Large Cap | [M] = Mid Cap | [S] = Small Cap | [X] = Micro Cap'));
+  console.log(chalk.gray(' 📊 30d = Primary trend (40%) | 7d = Short-term (20%) | 24h = Entry (10%)'));
   console.log(chalk.yellow(' ⚠️  Bukan rekomendasi investasi. Ini scoring berbasis momentum historis.'));
   console.log(chalk.cyan('╚═══════════════════════════════════════════════════════════════════════════════╝'));
   console.log('');
 }
 
 export function displayFilterStats(stats) {
-  if (stats.rejected.stablecoin > 0) {
-    console.log(chalk.gray(`  📌 Difilter: ${stats.rejected.stablecoin} stablecoin/flat (< 1% 7d change)`));
+  const reasons = [];
+
+  if (stats.rejected.nonLatinSymbol > 0) {
+    reasons.push(`${stats.rejected.nonLatinSymbol} non-Latin symbol`);
   }
+  if (stats.rejected.stablecoin > 0) {
+    reasons.push(`${stats.rejected.stablecoin} stablecoin/flat`);
+  }
+  if (stats.rejected.change7d > 0) {
+    reasons.push(`${stats.rejected.change7d} negatif 7d`);
+  }
+  if (stats.rejected.marketCap > 0) {
+    reasons.push(`${stats.rejected.marketCap} market cap < $50M`);
+  }
+  if (stats.rejected.volume > 0) {
+    reasons.push(`${stats.rejected.volume} volume < $1M`);
+  }
+  if (stats.rejected.cmcRank > 0) {
+    reasons.push(`${stats.rejected.cmcRank} rank > 500`);
+  }
+  if (stats.rejected.supply > 0) {
+    reasons.push(`${stats.rejected.supply} invalid supply`);
+  }
+
   const totalRejected = Object.values(stats.rejected).reduce((a, b) => a + b, 0);
-  if (totalRejected > 0) {
-    console.log(chalk.gray(`  📌 Total rejected: ${totalRejected} koin`));
+  if (totalRejected > 0 && reasons.length > 0) {
+    console.log(chalk.gray(`  📌 Difilter: ${reasons.join(', ')}`));
   }
 }

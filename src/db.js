@@ -133,6 +133,7 @@ export async function saveSnapshot(coin) {
       name: coin.name,
       price: coin.price,
       percent_change_7d: coin.percent_change_7d,
+      percent_change_30d: coin.percent_change_30d, // v2.2 - added
       percent_change_24h: coin.percent_change_24h,
       volume_24h: coin.volume_24h,
       market_cap: coin.market_cap,
@@ -155,6 +156,7 @@ export async function saveSnapshots(coins) {
     name: coin.name,
     price: coin.price,
     percent_change_7d: coin.percent_change_7d,
+    percent_change_30d: coin.percent_change_30d, // v2.2 - added for 1-month trading
     percent_change_24h: coin.percent_change_24h,
     volume_24h: coin.volume_24h,
     market_cap: coin.market_cap,
@@ -326,6 +328,7 @@ export async function refreshSnapshotsForTracked(coinsData) {
         name: trackedCoin.name,
         price: coinData.quote.USD.price,
         percent_change_7d: coinData.quote.USD.percent_change_7d,
+        percent_change_30d: coinData.quote.USD.percent_change_30d, // v2.2 - added
         percent_change_24h: coinData.quote.USD.percent_change_24h,
         volume_24h: coinData.quote.USD.volume_24h,
         market_cap: coinData.quote.USD.market_cap,

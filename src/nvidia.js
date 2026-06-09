@@ -17,7 +17,8 @@ Output HARUS berupa JSON valid dengan struktur:
       "recommendation": "PICK" | "PASS",
       "reasoning": "Penjelasan singkat 2-3 kalimat",
       "breakdown": [
-        "Analisis momentum...",
+        "Analisis tren 30d...",
+        "Analisis momentum 7d...",
         "Analisis volume...",
         "Risiko market cap...",
         "Penilaian score...",
@@ -28,9 +29,9 @@ Output HARUS berupa JSON valid dengan struktur:
 }
 
 Aturan:
-- PICK: Score >= 70 DAN momentum positif (7d > 0, sebaiknya 30d > 0)
-- PASS: Score < 40 ATAU momentum negatif
-- Pertimbangkan: tren 7d/24h, kesehatan volume, risiko market cap tier
+- PICK: Score >= 70 DAN momentum positif (30d > 0 untuk 1-month trading)
+- PASS: Score < 40 ATAU momentum negatif (30d <= 0)
+- Pertimbangkan: tren 30d (PRIMARY), 7d/24h short-term, volume, market cap tier
 - Objektif, sebutkan risiko bahkan untuk PICK
 - PENTING: Gunakan coin_id persis dari data input
 - Gunakan BAHASA INDONESIA untuk semua output
@@ -38,14 +39,16 @@ Aturan:
 
 // Get scoring formula explanation
 function getScoringInfo() {
-  return `SCORING SYSTEM (v1.2):
+  return `SCORING SYSTEM (v2.2 - 1-Month Spot Trading):
 - Weighted Score 0-100, semakin tinggi semakin baik
-- 7d Price Change (12%): Sinyal momentum jangka pendek
-- 30d Change (48%): Mengkonfirmasi tren sehat untuk holding
+- 30d Change (40%): PRIMARY - Konfirmasi tren untuk 1-month hold target
+- 7d Change (20%): Momentum jangka pendek (1-week swing)
+- 24h Change (10%): Timing entry optimal
 - Volume Ratio (25%): Volume / (Market Cap × 0.01) - cek likuiditas
-- Market Cap Tier (10%): Large(25), Mid(50), Small(75), Micro(100) - semakin tinggi semakin spekulatif
-- 24h Change (5%): Sinyal minimal
-- Healthy Trend Bonus (+20): Untuk kenaikan steady (7d 0-50%, 30d > 0, bukan pump&dump)
+- Market Cap Tier (5%): Large(25), Mid(50), Small(75), Micro(100) - risk management
+- Healthy Trend Bonus (+15): Untuk kenaikan steady (7d > 0, 30d > 0, bukan pump&dump)
+- Supply Dilution Risk (-10): Penalty untuk high inflation (circulating < 50% max)
+- Sector Bonus (+5): Bonus untuk hot sectors (AI, DeFi, RWA, Meme)
 
 INTERPRETASI:
 - Score >= 70: Kandidat kuat untuk tracking
@@ -58,6 +61,7 @@ function formatUserPrompt(coins) {
   const coinsList = coins.map(coin => {
     const price = coin.price ? `$${coin.price.toLocaleString()}` : 'N/A';
     const change7d = coin.percent_change_7d?.toFixed(2) ?? 'N/A';
+    const change30d = coin.percent_change_30d?.toFixed(2) ?? 'N/A';
     const change24h = coin.percent_change_24h?.toFixed(2) ?? 'N/A';
     const volume = coin.volume_24h ? `$${(coin.volume_24h / 1e9).toFixed(2)}B` : 'N/A';
     const marketCap = coin.market_cap ? `$${(coin.market_cap / 1e9).toFixed(2)}B` : 'N/A';
@@ -68,10 +72,10 @@ ${coin.symbol} (${coin.name})
 - ID: ${coin.id}
 - Price: ${price}
 - 7d Change: ${change7d}%
+- 30d Change: ${change30d}% (PRIMARY - 40% weight)
 - 24h Change: ${change24h}%
 - Volume 24h: ${volume}
 - Market Cap: ${marketCap}
-- Tier: ${coin.tierLabel || 'N/A'}
 - System Score: ${score}/100`;
   }).join('\n');
 

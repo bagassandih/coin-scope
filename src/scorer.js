@@ -33,12 +33,38 @@ function isPumpAndDump(coin) {
   return isPumped && isDumping;
 }
 
-// Check if coin has healthy trend for holding (v1.2)
+// Check if coin has healthy trend for holding (v2.2 - 1 month trading)
 function hasHealthyTrend(coin) {
   const isPositive7d = coin.percent_change_7d > 0;
   const isNotExtreme = coin.percent_change_7d < 50;  // 7d < 50% (not pumped)
-  const isPositive30d = coin.percent_change_30d > 0; // 30d confirms trend
+  const isPositive30d = coin.percent_change_30d > 0; // 30d confirms trend (max hold time)
   return isPositive7d && isNotExtreme && isPositive30d;
+}
+
+// Check supply dilution risk (v2.0) - coins with high inflation are risky
+function getSupplyDilutionRisk(coin) {
+  if (!coin.circulating_supply || !coin.max_supply || coin.max_supply === 0) {
+    return 0; // Unknown, no penalty
+  }
+  const circulatingRatio = coin.circulating_supply / coin.max_supply;
+  // If < 50% of max supply is circulating, high inflation risk
+  if (circulatingRatio < 0.5) return 10;
+  if (circulatingRatio < 0.7) return 5;
+  return 0; // Most supply already circulating = low inflation risk
+}
+
+// Get sector bonus (v2.0) - bonus for hot sectors
+function getSectorBonus(coin) {
+  if (!coin.tags || coin.tags.length === 0) return 0;
+
+  const hotSectors = ['ai', 'artificial-intelligence', 'defi', 'layer-1', 'layer-2', 'rwa', 'meme'];
+  const coinTagsLower = coin.tags.map(t => t.toLowerCase());
+
+  const hasHotSector = hotSectors.some(sector =>
+    coinTagsLower.some(tag => tag.includes(sector))
+  );
+
+  return hasHotSector ? weights.sectorBonus : 0;
 }
 
 export function calculateScores(coins) {
@@ -71,7 +97,7 @@ export function calculateScores(coins) {
     const sVol = normalize(volumeRatio, minVol, maxVol);
     const sMcap = tier.score;
 
-    // Hybrid 30d logic (v1.1)
+    // Hybrid 30d logic (v1.1) - PRIMARY for 1-month trading
     let s30d;
     if (coin.percent_change_30d <= 0) {
       s30d = 20; // Penalty for dead cat bounce / flat trend
@@ -79,16 +105,25 @@ export function calculateScores(coins) {
       s30d = normalize(coin.percent_change_30d, min30d, max30d);
     }
 
-    // Healthy trend bonus (v1.2)
+    // Supply dilution risk penalty (v2.0)
+    const supplyRisk = getSupplyDilutionRisk(coin);
+
+    // Sector bonus (v2.0)
+    const sectorBonus = getSectorBonus(coin);
+
+    // Healthy trend bonus (v2.2 - 1 month trading)
     const healthyBonus = hasHealthyTrend(coin) ? weights.healthyTrendBonus : 0;
 
+    // Weighted score (v2.2 formula - 1 month spot trading)
     const weightedScore =
-      (s7d * weights.change7d) +
       (s30d * weights.change30d) +
       (sVol * weights.volume) +
-      (sMcap * weights.marketCapTier) +
+      (s7d * weights.change7d) +
       (s24h * weights.change24h) +
-      healthyBonus;
+      (sMcap * weights.marketCapTier) +
+      healthyBonus +
+      sectorBonus -
+      supplyRisk;
 
     return {
       ...coin,
@@ -101,6 +136,8 @@ export function calculateScores(coins) {
       sVol,
       sMcap,
       healthyBonus,
+      sectorBonus,
+      supplyRisk,
       weightedScore: Math.round(weightedScore * 10) / 10,
     };
   });

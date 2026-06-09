@@ -10,10 +10,18 @@ export function hardFilter(coins) {
       volume: 0,
       cmcRank: 0,
       supply: 0,
+      nonLatinSymbol: 0, // NEW: reject non-Latin symbols (v2.0)
     },
   };
 
   for (const coin of coins) {
+    // Check non-Latin symbol (v2.0) - filter before other checks
+    // Non-Latin symbols won't match Binance trading pairs
+    if (!coin.symbol || /[^\x00-\x7F]/.test(coin.symbol)) {
+      results.rejected.nonLatinSymbol++;
+      continue;
+    }
+
     // Check stablecoin/flat filter (7d < 1%)
     if (coin.percent_change_7d < filters.minChange7d) {
       results.rejected.stablecoin++;

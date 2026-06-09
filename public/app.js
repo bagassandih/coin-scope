@@ -136,10 +136,12 @@ async function loadTrackedCoins() {
         } else {
           if (item.snapshot_timestamp) {
             var c7d = item.percent_change_7d;
+            var c30d = item.percent_change_30d;
             var c24h = item.percent_change_24h;
             performanceHtml =
               '<div class="tracked-coin-performance">' +
                 '<div class="price">' + formatPrice(item.price) + '</div>' +
+                '<div class="' + (c30d >= 0 ? 'positive' : 'negative') + '">30d: ' + (c30d !== null ? formatPercent(c30d) : '-') + '</div>' +
                 '<div class="' + (c7d >= 0 ? 'positive' : 'negative') + '">7d: ' + (c7d !== null ? formatPercent(c7d) : '-') + '</div>' +
                 '<div class="' + (c24h >= 0 ? 'positive' : 'negative') + '">24h: ' + (c24h !== null ? formatPercent(c24h) : '-') + '</div>' +
               '</div>';
@@ -545,10 +547,10 @@ function renderCoins(data) {
           return '';
         })()) || '') +
         '<div class="coin-card-metrics">' +
-          '<div class="metric-item"><span class="metric-label">7d Change</span><span class="metric-value ' + (coin.percent_change_7d >= 0 ? 'positive' : 'negative') + '">' + formatPercent(coin.percent_change_7d) + '</span></div>' +
-          '<div class="metric-item"><span class="metric-label">24h Change</span><span class="metric-value ' + (coin.percent_change_24h >= 0 ? 'positive' : 'negative') + '">' + formatPercent(coin.percent_change_24h) + '</span></div>' +
-          '<div class="metric-item"><span class="metric-label">Volume</span><span class="metric-value">' + formatCurrency(coin.volume_24h) + '</span></div>' +
-          '<div class="metric-item"><span class="metric-label">Market Cap</span><span class="metric-value">' + formatCurrency(coin.market_cap) + '</span></div>' +
+          '<div class="metric-item"><span class="metric-label">30d</span><span class="metric-value ' + (coin.percent_change_30d >= 0 ? 'positive' : 'negative') + '">' + formatPercent(coin.percent_change_30d) + '</span></div>' +
+          '<div class="metric-item"><span class="metric-label">7d</span><span class="metric-value ' + (coin.percent_change_7d >= 0 ? 'positive' : 'negative') + '">' + formatPercent(coin.percent_change_7d) + '</span></div>' +
+          '<div class="metric-item"><span class="metric-label">24h</span><span class="metric-value ' + (coin.percent_change_24h >= 0 ? 'positive' : 'negative') + '">' + formatPercent(coin.percent_change_24h) + '</span></div>' +
+          '<div class="metric-item"><span class="metric-label">Score</span><span class="metric-value">' + (coin.score ? coin.score.toFixed(1) : '-') + '</span></div>' +
         '</div>' +
       '</div>' +
     '</div>';
@@ -900,12 +902,13 @@ async function showCoinHistory(coinId, symbol) {
 
       var tableRows = data.snapshots.map(function(s) {
         var scoreDisplay = s.score !== null ? s.score.toFixed(1) : '-';
+        var c30d = s.percent_change_30d;
         var c7d = s.percent_change_7d;
         var c24h = s.percent_change_24h;
-        return '<tr><td>' + formatTimestamp(s.timestamp) + '</td><td>' + formatPrice(s.price) + '</td><td class="' + (c7d >= 0 ? 'positive' : 'negative') + '">' + (c7d !== null ? formatPercent(c7d) : '-') + '</td><td class="' + (c24h >= 0 ? 'positive' : 'negative') + '">' + (c24h !== null ? formatPercent(c24h) : '-') + '</td><td>' + formatCurrency(s.volume_24h) + '</td><td>' + scoreDisplay + '</td></tr>';
+        return '<tr><td>' + formatTimestamp(s.timestamp) + '</td><td>' + formatPrice(s.price) + '</td><td class="' + (c30d >= 0 ? 'positive' : 'negative') + '">' + (c30d !== null ? formatPercent(c30d) : '-') + '</td><td class="' + (c7d >= 0 ? 'positive' : 'negative') + '">' + (c7d !== null ? formatPercent(c7d) : '-') + '</td><td class="' + (c24h >= 0 ? 'positive' : 'negative') + '">' + (c24h !== null ? formatPercent(c24h) : '-') + '</td><td>' + scoreDisplay + '</td></tr>';
       }).join('');
 
-      body.innerHTML = coinInfoHtml + performanceHtml + '<table class="history-table"><thead><tr><th>Date</th><th>Price</th><th>7d Change</th><th>24h Change</th><th>Volume</th><th>Score</th></tr></thead><tbody>' + tableRows + '</tbody></table>';
+      body.innerHTML = coinInfoHtml + performanceHtml + '<table class="history-table"><thead><tr><th>Date</th><th>Price</th><th>30d</th><th>7d</th><th>24h</th><th>Score</th></tr></thead><tbody>' + tableRows + '</tbody></table>';
     }
 
     modal.style.display = 'block';
@@ -1210,13 +1213,14 @@ async function showClosedHistory(coinId) {
 
     // Build snapshot table
     var tableRows = data.snapshots.map(function(s) {
+      var c30d = s.percent_change_30d;
       var c7d = s.percent_change_7d;
       var c24h = s.percent_change_24h;
       var scoreDisplay = s.score ? s.score.toFixed(1) : '-';
-      return '<tr><td>' + formatTimestamp(s.timestamp) + '</td><td>' + formatPrice(s.price) + '</td><td class="' + (c7d >= 0 ? 'positive' : 'negative') + '">' + (c7d !== null ? formatPercent(c7d) : '-') + '</td><td class="' + (c24h >= 0 ? 'positive' : 'negative') + '">' + (c24h !== null ? formatPercent(c24h) : '-') + '</td><td>' + formatCurrency(s.volume_24h) + '</td><td>' + scoreDisplay + '</td></tr>';
+      return '<tr><td>' + formatTimestamp(s.timestamp) + '</td><td>' + formatPrice(s.price) + '</td><td class="' + (c30d >= 0 ? 'positive' : 'negative') + '">' + (c30d !== null ? formatPercent(c30d) : '-') + '</td><td class="' + (c7d >= 0 ? 'positive' : 'negative') + '">' + (c7d !== null ? formatPercent(c7d) : '-') + '</td><td class="' + (c24h >= 0 ? 'positive' : 'negative') + '">' + (c24h !== null ? formatPercent(c24h) : '-') + '</td><td>' + scoreDisplay + '</td></tr>';
     }).join('');
 
-    body.innerHTML = performanceHtml + '<table class="history-table"><thead><tr><th>Date</th><th>Price</th><th>7d Change</th><th>24h Change</th><th>Volume</th><th>Score</th></tr></thead><tbody>' + tableRows + '</tbody></table>';
+    body.innerHTML = performanceHtml + '<table class="history-table"><thead><tr><th>Date</th><th>Price</th><th>30d</th><th>7d</th><th>24h</th><th>Score</th></tr></thead><tbody>' + tableRows + '</tbody></table>';
   } catch (err) {
     Swal.fire({
       icon: 'error',

@@ -93,6 +93,12 @@ export function extractCoinData(data) {
     percent_change_24h: coin.quote.USD.percent_change_24h || 0,
     percent_change_7d: coin.quote.USD.percent_change_7d || 0,
     percent_change_30d: coin.quote.USD.percent_change_30d || 0,
+    percent_change_60d: coin.quote.USD.percent_change_60d || 0,
+    percent_change_90d: coin.quote.USD.percent_change_90d || 0,
     circulating_supply: coin.circulating_supply || 0,
+    total_supply: coin.total_supply || 0,
+    max_supply: coin.max_supply || 0,
+    num_market_pairs: coin.num_market_pairs || 0,
+    tags: coin.tags || [],
   }));
 }

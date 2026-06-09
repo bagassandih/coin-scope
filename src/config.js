@@ -20,14 +20,17 @@ if (!config.cmcApiKey) {
   throw new Error('CMC_API_KEY is required. Set it in .env file');
 }
 
-// Scoring weights (v1.2 - optimized for 1-month hold strategy)
+// Scoring weights (v2.2 - optimized for 1-month spot trading)
+// Formula: 30d(40%) + Volume(25%) + 7d(20%) + 24h(10%) + Mcap(5%) + Bonuses
 export const weights = {
-  change7d: 0.12,      // Reduced: 7d too short-term, easily manipulated
-  change30d: 0.48,     // Increased: 30d confirms healthy trend for holding
-  volume: 0.25,        // Reduced: still important but less than trend
-  marketCapTier: 0.10, // Reduced: risk management
-  change24h: 0.05,     // Unchanged: minimal signal
-  healthyTrendBonus: 20, // NEW: bonus for steady rise (not pump & dump)
+  change30d: 0.40,        // PRIMARY: 30d trend for 1-month hold target
+  volume: 0.25,           // Volume confirms the move
+  change7d: 0.20,         // Short-term momentum
+  change24h: 0.10,        // Entry timing
+  marketCapTier: 0.05,    // Risk management
+  supplyDilutionRisk: 10,  // Penalty for high inflation coins
+  sectorBonus: 5,          // Bonus for hot sectors (AI, DeFi, etc)
+  healthyTrendBonus: 15,   // Bonus for steady rise (not pump & dump)
 };
 
 // Hard filter thresholds

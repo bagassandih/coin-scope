@@ -55,12 +55,21 @@ function mapCoinResponse(coin, index, trackedCoinIds) {
     price: coin.price,
     percent_change_7d: coin.percent_change_7d,
     percent_change_24h: coin.percent_change_24h,
+    percent_change_30d: coin.percent_change_30d,
+    percent_change_60d: coin.percent_change_60d,
+    percent_change_90d: coin.percent_change_90d,
     volume_24h: coin.volume_24h,
     market_cap: coin.market_cap,
     tier: coin.tier,
     tierLabel: coin.tierLabel,
     score: coin.weightedScore,
     tracked: trackedCoinIds.includes(coin.id),
+    tags: coin.tags || [],
+    // Supply metrics for dilution risk calculation
+    total_supply: coin.total_supply,
+    max_supply: coin.max_supply,
+    circulating_supply: coin.circulating_supply,
+    num_market_pairs: coin.num_market_pairs,
   };
 }
 
@@ -151,6 +160,7 @@ app.get('/api/analyze', async (req, res) => {
       });
     }
 
+    // Enrich with Binance sentiment if enabled
     const scoredCoins = calculateScores(filterResult.passed);
     const top5 = rankTop5(scoredCoins);
 

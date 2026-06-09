@@ -20,7 +20,7 @@ function getWIBTimestamp() {
 
 async function main() {
   try {
-    console.log(chalk.cyan(`\n🪙 CoinScope v1.2 - Sistem Lacak Koin Berpotensi Naik`));
+    console.log(chalk.cyan(`\n🪙 CoinScope v2.2 - Sistem Lacak Koin (1-Month Spot Trading)`));
     console.log(chalk.gray(`⏰ ${getWIBTimestamp()}\n`));
 
     // Step 1: Fetch Universe

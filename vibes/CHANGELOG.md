@@ -2,6 +2,116 @@
 
 All notable changes to CoinScope will be documented in this file.
 
+## [2.2.0] - 2026-06-09
+
+### Changed - Optimized for 1-Month Spot Trading
+
+**Removed 60d Trend:**
+- 60d data removed from scoring (not needed for max 4-week hold time)
+- Trading style: 1 day to 4 weeks hold time
+- Focus on 30d as maximum relevant timeframe
+
+**New Scoring Formula (v2.2):**
+```
+Score = 30d(40%) + Volume(25%) + 7d(20%) + 24h(10%) + Mcap(5%) + Bonuses
+```
+
+**Weight Changes:**
+- 30d: **40%** (PRIMARY - max 1 month hold target)
+- Volume: **25%** (confirms real movement)
+- 7d: **20%** (short-term momentum)
+- 24h: **10%** (entry timing)
+- Mcap: **5%** (risk management)
+
+**Timeframe Relevance:**
+| Data | Relevan? | Reason |
+|------|----------|--------|
+| 24h | ✅ | Entry timing (scalping/day trade) |
+| 7d | ✅ | Short-term swing (1 week hold) |
+| 30d | ✅ | Max hold target (4 weeks) |
+| 60d | ❌ | Too long (never hold 2 months) |
+
+---
+
+## [2.1.0] - 2026-06-09
+
+### Changed - Remove Binance, CMC Only
+
+**Removed:**
+- Binance Public API integration (SSL certificate issues)
+- `USE_BINANCE` config option
+- `src/binance.js` module
+- Funding rate sentiment scoring
+
+**Now 100% CMC Data:**
+- All scoring components use CoinMarketCap data only
+- Simpler codebase without external dependencies
+- Faster execution (no API latency from Binance)
+
+**Non-Latin Symbol Filter (Added):**
+- Filters coins with Chinese/other non-Latin symbols
+- Prevents matching issues with trading pairs
+- Rejects 1 coin in current universe ("币安人生")
+
+**Technical Changes:**
+- Updated scoring formula to v2.1 (CMC-only)
+- Removed `enrichWithBinanceSentiment` function
+- Updated config, index.js, server.js
+
+---
+
+## [2.0.0] - 2026-06-09
+
+### Added - Enhanced Scoring Engine (v2.0)
+
+**New CMC Extended Data Fields:**
+- `percent_change_60d` and `percent_change_90d` - Longer trend confirmation
+- `total_supply` and `max_supply` - Dilution risk calculation
+- `num_market_pairs` - Exchange presence (liquidity proxy)
+- `tags` - Sector filtering (AI, DeFi, Layer-1, Layer-2, RWA, Meme)
+
+**New Binance Public API Integration:**
+- Funding rate sentiment analysis (free, no API key required)
+- Open interest data available
+- Long/Short ratio data available
+- Batch fetching for efficiency
+- Sentiment score: -10 (overly bullish/risky) to +10 (overly bearish/opportunity)
+
+**New Scoring Formula (v2.0):**
+```
+Score = (60d × 30%) + (30d × 15%) + (7d × 10%) + (Volume × 25%) + (Mcap Tier × 5%) + (24h × 5%) + Sentiment
+```
+
+**New Scoring Components:**
+- **Supply Dilution Risk** (-10 penalty): High inflation risk when <50% supply circulating
+- **Sector Bonus** (+5 points): Bonus for hot sectors (AI, DeFi, RWA, Meme)
+- **Healthy Trend Bonus** (+15 points): Reduced from v1.2, now requires positive 60d trend
+- **Sentiment Score** (±10 points): From Binance funding rates
+
+**Weight Changes vs v1.2:**
+- 60d trend: 30% (NEW - most reliable indicator)
+- 30d trend: 15% (reduced from 48%)
+- 7d trend: 10% (reduced from 12%)
+- Volume: 25% (unchanged)
+- Mcap Tier: 5% (reduced from 10%)
+- 24h: 5% (unchanged)
+
+**Environment Variables:**
+- `USE_BINANCE=false` - Set to `true` to enable Binance sentiment data
+  - ⚠️ Note: Binance API currently has SSL certificate issues (2026-06-09)
+  - If enabled, system will continue without funding data if API fails
+
+**Technical Changes:**
+- New file: `src/binance.js` - Binance Public API integration
+- Updated: `src/fetcher.js` - Extended CMC data extraction
+- Updated: `src/config.js` - New weights and USE_BINANCE flag
+- Updated: `src/scorer.js` - v2.0 scoring formula with new components
+- Updated: `src/index.js` - Binance enrichment step
+- Updated: `src/server.js` - API endpoints support Binance data
+- Updated: `package.json` - Version bump to 2.0.0
+
+---
+
 ## [1.5.0] - 2026-06-08
 
 ### Added - AI Analyze Feature
