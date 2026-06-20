@@ -2,6 +2,30 @@
 
 All notable changes to CoinScope will be documented in this file.
 
+## [2.2.1] - 2026-06-20
+
+### Fixed - PnL Calculation Bug
+
+**Problem:**
+- PnL showed 0% when closing positions even with price movement
+- Occurred when closing quickly after tracking (insufficient snapshots)
+- Also affected re-tracking the same coin after closing
+
+**Root Cause:**
+- No snapshot was created at close time
+- PnL calculated from existing snapshots only
+- If only 1 snapshot existed: `firstSnapshot === lastSnapshot` → PnL = 0%
+
+**Solution:**
+- Create final snapshot at close time in `/api/close` endpoint
+- Fetch current price from cached CMC data before closing
+- Ensures accurate exit price and PnL calculation
+
+**Files Changed:**
+- `src/server.js` - Added snapshot creation to `/api/close` endpoint
+
+---
+
 ## [2.2.0] - 2026-06-09
 
 ### Changed - Optimized for 1-Month Spot Trading

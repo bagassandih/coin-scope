@@ -333,13 +333,59 @@ app.post('/api/close', async (req, res) => {
       });
     }
 
+    // Get the tracked coin details before closing
+    const tracked = await getTrackedCoins();
+    const coinToClose = tracked.find(c => c.tracking_id === coinId);
+
+    if (coinToClose) {
+      // Create a final snapshot at close time with current price
+      try {
+        // Try to get current price from cache or fetch from CMC
+        const cached = getCachedData('cmc_data');
+        let currentPrice = null;
+
+        if (cached) {
+          const coins = extractCoinData(cached.data);
+          const coinData = coins.find(c => c.id === coinToClose.coin_id);
+          if (coinData) {
+            currentPrice = coinData.price;
+          }
+        }
+
+        // If we have a price, create the final snapshot
+        if (currentPrice) {
+          await saveSnapshot({
+            tracking_id: coinToClose.tracking_id,
+            symbol: coinToClose.symbol,
+            name: coinToClose.name,
+            price: currentPrice,
+            percent_change_7d: 0,  // Not needed for close snapshot
+            percent_change_30d: 0,
+            percent_change_24h: 0,
+            volume_24h: 0,
+            market_cap: 0,
+            tier: null,
+            tier_label: null,
+            score: null,
+            timestamp: new Date().toISOString(),
+          });
+          log(`  📸 Created close snapshot for ${coinToClose.symbol} at ${currentPrice}`);
+        } else {
+          log(`  ⚠️  Could not get current price for ${coinToClose.symbol} - close snapshot not created`);
+        }
+      } catch (snapErr) {
+        // Don't fail the close if snapshot creation fails
+        log(`  ⚠️  Failed to create close snapshot: ${snapErr.message}`);
+      }
+    }
+
     // coinId is now tracking_id (UUID)
     await closePosition(coinId, reason);
-    const tracked = await getTrackedCoins();
+    const updatedTracked = await getTrackedCoins();
 
     res.json({
       success: true,
-      tracked,
+      tracked: updatedTracked,
     });
   } catch (err) {
     console.error('Error:', err.message);
