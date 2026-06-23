@@ -506,9 +506,6 @@ function renderCoins(data) {
       ? '<span class="network-badge">' + coin.platform + '</span>'
       : '<span class="network-badge native">Native</span>';
 
-    // Score color class
-    var scoreClass = coin.score >= 70 ? 'score-high' : coin.score >= 40 ? 'score-mid' : 'score-low';
-
     // Rank class
     var rankClass = coin.rank <= 3 ? 'rank-' + coin.rank : 'rank-default';
 
@@ -532,10 +529,6 @@ function renderCoins(data) {
         '</div>' +
         '<div class="coin-card-price">' +
           '<span class="coin-price">' + formatPrice(coin.price) + '</span>' +
-          '<div class="coin-card-score ' + scoreClass + '">' +
-            '<div class="score-value">' + coin.score.toFixed(1) + '</div>' +
-            '<div class="score-label">Score</div>' +
-          '</div>' +
         '</div>' +
         ((aiAnalysisResults && (function() {
           var aiResult = aiAnalysisResults.find(function(r) { return r.coin_id === coin.id || r.symbol === coin.symbol; });
@@ -550,7 +543,8 @@ function renderCoins(data) {
           '<div class="metric-item"><span class="metric-label">30d</span><span class="metric-value ' + (coin.percent_change_30d >= 0 ? 'positive' : 'negative') + '">' + formatPercent(coin.percent_change_30d) + '</span></div>' +
           '<div class="metric-item"><span class="metric-label">7d</span><span class="metric-value ' + (coin.percent_change_7d >= 0 ? 'positive' : 'negative') + '">' + formatPercent(coin.percent_change_7d) + '</span></div>' +
           '<div class="metric-item"><span class="metric-label">24h</span><span class="metric-value ' + (coin.percent_change_24h >= 0 ? 'positive' : 'negative') + '">' + formatPercent(coin.percent_change_24h) + '</span></div>' +
-          '<div class="metric-item"><span class="metric-label">Score</span><span class="metric-value">' + (coin.score ? coin.score.toFixed(1) : '-') + '</span></div>' +
+          '<div class="metric-item"><span class="metric-label">Market Cap</span><span class="metric-value">' + formatCurrency(coin.market_cap) + '</span></div>' +
+          '<div class="metric-item"><span class="metric-label">Volume</span><span class="metric-value">' + formatCurrency(coin.volume_24h) + '</span></div>' +
         '</div>' +
       '</div>' +
     '</div>';

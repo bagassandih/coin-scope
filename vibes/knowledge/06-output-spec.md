@@ -36,8 +36,9 @@
 | 4 | 24h Change (%) | +8.1% | Percentage dengan tanda ± |
 | 5 | Volume 24h (USD) | $2.4B | Short number format (K/M/B/T) |
 | 6 | Market Cap + Tier | $1.89T [Large Cap] | Currency + [Tier] |
-| 7 | Weighted Score | 87.4 / 100 | Decimal 1 angka |
-| 8 | Ranking Posisi | #1 dari Top 5 | `#{position} dari Top 5` |
+| 7 | Ranking Posisi | #1 dari Top 5 | `#{position} dari Top 5` |
+
+> **Note v2.2.2**: Weighted Score dihitung internally untuk ranking, tapi **tidak ditampilkan di UI**. Score hanya mechanism untuk determine Top 5, bukan nilai yang perlu di-show ke user.
 
 ---
 

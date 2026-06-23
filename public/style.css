@@ -621,56 +621,6 @@ h1 {
   background-clip: text;
 }
 
-/* Score pill wrapper */
-.coin-card-score {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: flex-end;
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-weight: 700;
-}
-
-.score-value {
-  font-size: 1.5rem;
-  font-weight: 800;
-  line-height: 1;
-}
-
-.score-label {
-  font-size: 0.55rem;
-  opacity: 0.8;
-  margin-top: 2px;
-}
-
-/* Color coding by score range */
-.coin-card-score.score-high {
-  background: rgba(34, 197, 94, 0.15);
-  color: #22c55e;
-}
-
-.coin-card-score.score-high .score-value {
-  color: #22c55e;
-}
-
-.coin-card-score.score-mid {
-  background: rgba(234, 179, 8, 0.15);
-  color: #eab308;
-}
-
-.coin-card-score.score-mid .score-value {
-  color: #eab308;
-}
-
-.coin-card-score.score-low {
-  background: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
-}
-
-.coin-card-score.score-low .score-value {
-  color: #ef4444;
-}
-
 /* Metrics section */
 .coin-card-metrics {
   display: grid;
@@ -809,19 +759,6 @@ h1 {
     font-size: 1.35rem;
   }
 
-  .coin-card-score {
-    text-align: right;
-    grid-column: 4 / 5;
-  }
-
-  .score-value {
-    font-size: 1.5rem;
-  }
-
-  .score-label {
-    font-size: 0.5rem;
-  }
-
   .coin-card-metrics {
     display: flex;
     flex-wrap: wrap;
@@ -880,10 +817,6 @@ h1 {
 
   .coin-price {
     font-size: 1.5rem;
-  }
-
-  .score-value {
-    font-size: 1.75rem;
   }
 
   .metric-label {
@@ -1073,10 +1006,6 @@ footer {
 
   .coin-price {
     font-size: 1.35rem;
-  }
-
-  .score-value {
-    font-size: 1.5rem;
   }
 
   .coin-card-metrics {

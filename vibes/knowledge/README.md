@@ -44,6 +44,8 @@ Weighted Score = (S_7d × 12%) + (S_30d × 48%) + (S_vol × 25%) + (S_mcap × 10
 Fetch Universe → Hard Filter → Normalisasi → Scoring → Ranking → Display
 ```
 
+> **Note v2.2.2**: Score dihitung internally untuk ranking mechanism, tapi **tidak ditampilkan di UI**. User hanya melihat metrics actual (price changes, volume, market cap), bukan score numerik.
+
 ## 🚀 Status Development
 
 | Versi | Status | Target |
@@ -56,6 +58,9 @@ Fetch Universe → Hard Filter → Normalisasi → Scoring → Ranking → Displ
 | v1.3 | ✅ **Released** | **UX Improvements (Mobile)** |
 | v1.4 | ✅ **Released** | **Closed Tab Redesign** |
 | v1.5 | ✅ **Released** | **AI Analyze Feature** |
+| v2.2 | ✅ **Released** | **1-Month Spot Trading Optimization** |
+| v2.2.1 | ✅ **Released** | **PnL Calculation Bug Fix** |
+| v2.2.2 | ✅ **Released** | **UI Simplification (Score Removed)** |
 | v1.6 | 🔮 Planned | Otomasi |
 | v2.0 | 🔮 Planned | Scale Up |
 

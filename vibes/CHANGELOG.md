@@ -2,6 +2,26 @@
 
 All notable changes to CoinScope will be documented in this file.
 
+## [2.2.2] - 2026-06-23
+
+### Changed - UI Simplification
+
+**Removed Score Display:**
+- Score removed from coin card UI (Top 5 tab)
+- Score still calculated internally for ranking
+- Market Cap and Volume remain visible in metrics grid
+
+**Rationale:**
+- Score was internal ranking mechanism, not needed for user display
+- Focus on actual metrics: price changes, market cap, volume
+- Cleaner, less cluttered UI
+
+**Files Changed:**
+- `public/app.js` - Removed score display and unused `scoreClass` variable
+- `public/style.css` - Removed all score-related CSS
+
+---
+
 ## [2.2.1] - 2026-06-20
 
 ### Fixed - PnL Calculation Bug
