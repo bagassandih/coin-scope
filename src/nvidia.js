@@ -1,13 +1,13 @@
 // NVIDIA NIM API Integration for AI Coin Analysis
 import { config } from './config.js';
 import * as cache from './cache.js';
+import axios from "axios";
 
 const CACHE_KEY = 'ai_analysis_top5';
 
 // System prompt - defines AI role and output format
-const SYSTEM_PROMPT = `Anda adalah analis cryptocurrency ahli. Analisis koin yang diberikan dan berikan rekomendasi PICK/PASS.
-
-Output HARUS berupa JSON valid dengan struktur:
+const SYSTEM_PROMPT = `Anda adalah analis cryptocurrency ahli. Anda HARUS merespons sebuah objek JSON (teks lain tidak diperbolehkan).
+Contoh format yang diharapkan:
 {
   "analysis": [
     {
@@ -20,22 +20,14 @@ Output HARUS berupa JSON valid dengan struktur:
         "Analisis tren 30d...",
         "Analisis momentum 7d...",
         "Analisis volume...",
-        "Risiko market cap...",
-        "Penilaian score...",
-        "Kesimpulan..."
+        "Analisis risiko market cap...",
+        "Analisis penilaian score...",
+        "Analisis kesimpulan..."
       ]
     }
   ]
 }
-
-Aturan:
-- PICK: Score >= 70 DAN momentum positif (30d > 0 untuk 1-month trading)
-- PASS: Score < 40 ATAU momentum negatif (30d <= 0)
-- Pertimbangkan: tren 30d (PRIMARY), 7d/24h short-term, volume, market cap tier
-- Objektif, sebutkan risiko bahkan untuk PICK
-- PENTING: Gunakan coin_id persis dari data input
-- Gunakan BAHASA INDONESIA untuk semua output
-- Return HANYA JSON object, tanpa markdown, tanpa text tambahan`;
+`;
 
 // Get scoring formula explanation
 function getScoringInfo() {
@@ -97,47 +89,73 @@ export async function callNvidiaAPI(coins) {
     throw new Error('NVIDIA_API_KEY not set in environment');
   }
 
-  const response = await fetch(apiUrl, {
-    method: 'POST',
+  // Call NVIDIA NIM API
+  const response = await axios.post(apiUrl, {
+    model,
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: formatUserPrompt(coins) },
+    ],
+    temperature: 0.3,
+    max_tokens: 2000, // Increased to avoid truncation
+  }, {
     headers: {
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: formatUserPrompt(coins) },
-      ],
-      temperature: 0.3,
-      max_tokens: 2000,
-      response_format: { type: 'json_object' },
-    }),
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`NVIDIA API error: ${response.status} ${response.statusText} - ${errorText}`);
-  }
+  const rawText = response.data.choices[0]?.message?.content ?? '';
 
-  const data = await response.json();
-  const content = data.choices[0]?.message?.content;
-
-  if (!content) {
+  if (!rawText || rawText.trim() === '') {
     throw new Error('Empty response from NVIDIA API');
   }
 
-  // Parse JSON response
+  // Extract JSON object from the text, handling markdown code blocks
+  let jsonText = rawText.trim();
+
+  // Try to extract JSON from markdown code block
+  const markdownMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  if (markdownMatch) {
+    jsonText = markdownMatch[1].trim();
+  } else {
+    // Fallback: try to extract by braces
+    const firstBrace = rawText.indexOf('{');
+    if (firstBrace >= 0) {
+      let braceCount = 0;
+      for (let i = firstBrace; i < rawText.length; i++) {
+        const ch = rawText[i];
+        if (ch === '{') braceCount++;
+        if (ch === '}') {
+          braceCount--;
+          if (braceCount === 0) {
+            jsonText = rawText.slice(firstBrace, i + 1);
+            break;
+          }
+        }
+      }
+    }
+    // If no braces found, jsonText remains the trimmed rawText
+  }
+
+  console.log('Raw text:', rawText);
+  console.log('JSON text to parse:', jsonText);
+
+  let parsed;
   try {
-    const parsed = JSON.parse(content);
-    return parsed.analysis || [];
-  } catch (err) {
-    console.error('Failed to parse NVIDIA response:', content);
+    parsed = JSON.parse(jsonText);
+  } catch (e) {
+    console.error('Failed to parse NVIDIA response:', jsonText);
     throw new Error('Invalid JSON response from AI');
   }
+
+  if (!parsed || !Array.isArray(parsed.analysis)) {
+    throw new Error('Unexpected AI response structure');
+  }
+
+  return parsed.analysis;
 }
 
-// Get error result for failed analysis
 function getErrorResults(coins, message = 'AI analysis unavailable. Please try again later.') {
   return coins.map(coin => ({
     coin_id: coin.id,
@@ -176,7 +194,7 @@ export async function analyzeCoins(coins, forceRefresh = false) {
   try {
     analysis = await callNvidiaAPI(coins);
   } catch (err) {
-    console.error('NVIDIA API call failed:', err.message);
+    console.error('NVIDIA API call failed:', err);
     // Return error results
     return getErrorResults(coins, err.message.includes('rate limit')
       ? 'Rate limited. Please try again in 1 minute.'
