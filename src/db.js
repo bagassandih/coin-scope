@@ -214,6 +214,29 @@ export async function getCoinSnapshots(trackingId) {
   return data;
 }
 
+// Batch: ambil snapshot untuk banyak tracking_id sekaligus (hindari N+1 query)
+// Return: Map<tracking_id, snapshots[]> diurutkan ascending
+export async function getSnapshotsForTrackingIds(trackingIds) {
+  if (!trackingIds || trackingIds.length === 0) return new Map();
+
+  const { data, error } = await supabase
+    .from('snapshots')
+    .select('*')
+    .in('tracking_id', trackingIds)
+    .order('timestamp', { ascending: true });
+
+  if (error) throw error;
+
+  const grouped = new Map();
+  for (const row of data || []) {
+    if (!grouped.has(row.tracking_id)) {
+      grouped.set(row.tracking_id, []);
+    }
+    grouped.get(row.tracking_id).push(row);
+  }
+  return grouped;
+}
+
 // ============================================
 // TRACKED WITH LATEST SNAPSHOT (JOIN)
 // ============================================

@@ -57,6 +57,11 @@ export function getCoinSnapshots(coinId) {
   return db.getCoinSnapshots(coinId);
 }
 
+// Get snapshots for many tracking_ids at once (batch, avoid N+1)
+export function getSnapshotsForTrackingIds(trackingIds) {
+  return db.getSnapshotsForTrackingIds(trackingIds);
+}
+
 // Get latest snapshot for each tracked coin
 export async function getLatestSnapshots() {
   return db.getTrackedWithLatestSnapshot();

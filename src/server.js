@@ -1,5 +1,5 @@
 import express from 'express';
-import { fetchCoins, extractCoinData } from './fetcher.js';
+import { fetchCoins, extractCoinData, fetchCoinPriceById } from './fetcher.js';
 import { hardFilter } from './filter.js';
 import { calculateScores, rankTop5, getMarketCapTierScore } from './scorer.js';
 import { getCachedData, getCacheAge } from './cache.js';
@@ -12,6 +12,7 @@ import {
   saveSnapshot,
   getLatestSnapshots,
   getCoinSnapshots,
+  getSnapshotsForTrackingIds,
   getCoinPerformance,
   getClosedPositions,
   closePosition,
@@ -360,15 +361,17 @@ app.post('/api/close', async (req, res) => {
     if (coinToClose) {
       // Create a final snapshot at close time with current price
       try {
-        // Try to get current price from cache (fresh data from last refresh)
-        const cached = getCachedData();
-        let currentPrice = null;
+        // Utamakan harga live dari CMC API; fallback ke cache lokal
+        let currentPrice = await fetchCoinPriceById(coinToClose.coin_id);
 
-        if (cached) {
-          const coins = extractCoinData(cached.data);
-          const coinData = coins.find(c => c.id === coinToClose.coin_id);
-          if (coinData) {
-            currentPrice = coinData.price;
+        if (currentPrice == null) {
+          const cached = getCachedData();
+          if (cached) {
+            const coins = extractCoinData(cached.data);
+            const coinData = coins.find(c => c.id === coinToClose.coin_id);
+            if (coinData) {
+              currentPrice = coinData.price;
+            }
           }
         }
 
@@ -451,10 +454,13 @@ app.get('/api/closed', async (req, res) => {
     const filter = req.query.filter || 'all';
     const closed = await getClosedPositions(filter);
 
-    // Enrich with latest snapshot data for performance calculation
-    const enriched = await Promise.all(closed.map(async (coin) => {
+    // Ambil SEMUA snapshot untuk semua posisi closed dalam 1 query (hindari N+1)
+    const trackingIds = closed.map(c => c.tracking_id);
+    const snapshotsByTracking = await getSnapshotsForTrackingIds(trackingIds);
+
+    const enriched = closed.map((coin) => {
       // coin.tracking_id is the UUID
-      const snapshots = await getCoinSnapshots(coin.tracking_id);
+      const snapshots = snapshotsByTracking.get(coin.tracking_id) || [];
       const firstSnapshot = snapshots[0];
       const lastSnapshot = snapshots[snapshots.length - 1];
 
@@ -486,7 +492,7 @@ app.get('/api/closed', async (req, res) => {
         performance,
         hold_days: holdDays,
       };
-    }));
+    });
 
     res.json({
       success: true,
