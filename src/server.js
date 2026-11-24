@@ -184,7 +184,8 @@ app.get('/api/analyze', async (req, res) => {
 // API endpoint to refresh data
 app.post('/api/refresh', async (req, res) => {
   try {
-    const rawData = await fetchCoins();
+    // Force fetch from CMC API (ignore cache) — tombol Refresh harus benar-benar refresh
+    const rawData = await fetchCoins(true);
     const coins = extractCoinData(rawData);
     const filterResult = hardFilter(coins);
 
@@ -287,11 +288,30 @@ app.post('/api/track', async (req, res) => {
     let tracked;
     if (action === 'add') {
       const { mode, entry_price } = req.body;
-      const result = await addTrackedCoin(req.body.coin, mode || 'cmc', entry_price || null);
+      const { coin } = req.body;
+
+      if (!coin || !coin.id) {
+        return res.status(400).json({
+          success: false,
+          error: 'coin object with id is required',
+        });
+      }
+
+      // Prevent duplicate active tracking of the same coin
+      const alreadyTracked = await isCoinTracked(coin.id);
+      if (alreadyTracked) {
+        return res.status(400).json({
+          success: false,
+          error: 'Koin ini sudah sedang di-track. Batalkan tracking dulu sebelum men-track ulang.',
+        });
+      }
+
+      const result = await addTrackedCoin(coin, mode || 'cmc', entry_price || null);
       // Return tracking_id (UUID) so frontend can use it for close/resume
       tracked = await getTrackedCoins();
     } else if (action === 'remove') {
-      // For remove, coinId is actually tracking_id (UUID)
+      // coinId bisa berupa tracking_id (UUID) dari tab Tracked,
+      // atau coin_id (integer CMC) dari tab Top 5. Keduanya di-handle di db.removeTrackedCoin.
       await removeTrackedCoin(coinId);
       tracked = await getTrackedCoins();
     } else {
@@ -340,8 +360,8 @@ app.post('/api/close', async (req, res) => {
     if (coinToClose) {
       // Create a final snapshot at close time with current price
       try {
-        // Try to get current price from cache or fetch from CMC
-        const cached = getCachedData('cmc_data');
+        // Try to get current price from cache (fresh data from last refresh)
+        const cached = getCachedData();
         let currentPrice = null;
 
         if (cached) {

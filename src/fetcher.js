@@ -44,13 +44,17 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-export async function fetchCoins() {
-  const cached = getCachedData();
-  if (cached) {
-    const age = getCacheAge();
-    const mins = Math.floor(age / 60);
-    logFetch(`  💾 Using cached data (${mins}m old)`);
-    return cached.data;
+export async function fetchCoins(force = false) {
+  if (!force) {
+    const cached = getCachedData();
+    if (cached) {
+      const age = getCacheAge();
+      const mins = Math.floor(age / 60);
+      logFetch(`  💾 Using cached data (${mins}m old)`);
+      return cached.data;
+    }
+  } else {
+    logFetch('  🌐 Force refreshing from CMC API...');
   }
 
   logFetch('  🌐 Fetching from CMC API...');

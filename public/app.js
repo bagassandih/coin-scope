@@ -606,6 +606,13 @@ function renderCoins(data) {
 
           e.target.checked = true;
 
+          // Sinkronkan currentData agar checkbox tetap centang saat re-render
+          if (currentData && currentData.top5) {
+            var coinObj = currentData.top5.find(function(c) { return c.id === id; });
+            if (coinObj) coinObj.tracked = true;
+          }
+          updateTrackedCount();
+
           Swal.fire({
             icon: 'success',
             title: 'Tracking Dimulai!',
@@ -647,6 +654,12 @@ function renderCoins(data) {
           if (!data.success) throw new Error(data.error);
 
           e.target.checked = false;
+          // Sinkronkan currentData agar checkbox tidak centang
+          if (currentData && currentData.top5) {
+            var coinObj = currentData.top5.find(function(c) { return c.id === id; });
+            if (coinObj) coinObj.tracked = false;
+          }
+          updateTrackedCount();
           Swal.fire({ icon: 'success', title: 'Stopped!', text: coinSymbol + ' dihapus dari tracking', timer: 1500, showConfirmButton: false, background: '#1e293b', color: '#f8fafc' });
         } catch (err) {
           Swal.fire({ icon: 'error', title: 'Gagal', text: err.message, background: '#1e293b', color: '#f8fafc' });
@@ -822,6 +835,12 @@ async function untrackCoin(coinId, symbol, event) {
         background: '#1e293b',
         color: '#f8fafc'
       });
+
+      // Sinkronkan currentData agar checkbox top5 tidak centang
+      if (currentData && currentData.top5) {
+        var coinObj = currentData.top5.find(function(c) { return c.symbol === symbol; });
+        if (coinObj) coinObj.tracked = false;
+      }
 
       // Reload tracked tab
       loadTrackedCoins();
@@ -1071,7 +1090,7 @@ async function fetchClosedPositions(filter) {
 
         // Closed positions are read-only historical records - no action buttons
         return '<div class="closed-coin-item" onclick="showClosedHistory(\'' + coin.tracking_id + '\')">' +
-          '<img src="' + coin.logo + '" alt="' + coin.symbol + '" class="closed-coin-logo" onerror="this.src=\'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E🪙%3C/text%3E%3C/svg\3E\'">' +
+          '<img src="' + coin.logo + '" alt="' + coin.symbol + '" class="closed-coin-logo" onerror="this.src=\'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E🪙%3C/text%3E%3C/svg%3E\'">' +
           '<div class="closed-coin-info">' +
             '<h3>' + coin.name + ' <span class="close-tag-inline ' + tagClass + '">' + tagLabel + '</span></h3>' +
             '<p>' + coin.symbol + '</p>' +

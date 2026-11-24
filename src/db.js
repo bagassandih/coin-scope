@@ -97,12 +97,25 @@ export async function addTrackedCoin(coin, mode = 'cmc', entryPrice = null) {
   return data;
 }
 
-export async function removeTrackedCoin(trackingId) {
-  const { error } = await supabase
-    .from('tracked_coins')
-    .delete()
-    .eq('tracking_id', trackingId);
+export async function removeTrackedCoin(coinId) {
+  // coinId bisa berupa tracking_id (UUID) ATAU coin_id (integer CMC ID)
+  // - Tab Tracked mengirim UUID (tracking_id)
+  // - Tab Top 5 mengirim integer (coin_id) — harap di-handle juga
+  const isUuid = typeof coinId === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(coinId);
 
+  let query = supabase
+    .from('tracked_coins')
+    .delete();
+
+  if (isUuid) {
+    query = query.eq('tracking_id', coinId);
+  } else {
+    // Untrack via CMC coin ID — hapus semua baris ACTIVE untuk koin ini
+    query = query.eq('coin_id', coinId).eq('status', 'active');
+  }
+
+  const { error } = await query;
   if (error) throw error;
   return true;
 }
