@@ -1088,7 +1088,13 @@ async function fetchClosedPositions(filter) {
             '<span class="price-exit">Exit: ' + exitPrice + '</span>' +
           '</div>';
 
-        // Closed positions are read-only historical records - no action buttons
+        // Action buttons (Resume / Delete) - stopPropagation agar tidak membuka history
+        var actionHtml =
+          '<div class="closed-coin-actions" onclick="event.stopPropagation()">' +
+            '<button class="closed-action-btn btn-resume" onclick="resumePosition(\'' + coin.tracking_id + '\')" title="Kembalikan ke tracking aktif">↩ Resume</button>' +
+            '<button class="closed-action-btn btn-delete" onclick="deleteClosedPosition(\'' + coin.tracking_id + '\')" title="Hapus permanen & riwayatnya">🗑️ Hapus</button>' +
+          '</div>';
+
         return '<div class="closed-coin-item" onclick="showClosedHistory(\'' + coin.tracking_id + '\')">' +
           '<img src="' + coin.logo + '" alt="' + coin.symbol + '" class="closed-coin-logo" onerror="this.src=\'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E🪙%3C/text%3E%3C/svg%3E\'">' +
           '<div class="closed-coin-info">' +
@@ -1105,6 +1111,7 @@ async function fetchClosedPositions(filter) {
             '<span class="stat-label">Closed</span>' +
             '<span class="stat-value">' + formatDateCompact(closedDate) + '</span>' +
           '</div>' +
+          actionHtml +
         '</div>';
       }).join('') +
     '</div>';
