@@ -78,6 +78,34 @@ export async function fetchCoins(force = false) {
   return data;
 }
 
+// Fetch harga live untuk 1 koin (ringan, dipakai saat close position)
+// Fallback ke null jika gagal (biarkan pemakaian cache)
+export async function fetchCoinPriceById(coinId) {
+  try {
+    const url = `${config.cmcApiUrl}/cryptocurrency/quotes/latest`;
+    const options = {
+      headers: {
+        'X-CMC_PRO_API_KEY': config.cmcApiKey,
+        'Accept': 'application/json',
+      },
+      params: {
+        id: coinId,
+        convert: 'USD',
+      },
+    };
+
+    const data = await fetchWithRetry(url, options, 2);
+    const quote = data?.data?.[String(coinId)]?.quote?.USD;
+    if (!quote || typeof quote.price !== 'number') {
+      return null;
+    }
+    return quote.price;
+  } catch (err) {
+    logFetch(`  ⚠️  Could not fetch live price for coin ${coinId}: ${err.message}`);
+    return null;
+  }
+}
+
 export function extractCoinData(data) {
   if (!data || !data.data) {
     return [];
