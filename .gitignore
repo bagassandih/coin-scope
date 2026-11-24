@@ -4,3 +4,6 @@ node_modules/
 src/cache/*.json
 .DS_Store
 *.log
+
+# Review artifacts (laporan & draf audit yang bukan bagian dari aplikasi)
+outputs/
